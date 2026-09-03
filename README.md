@@ -70,21 +70,39 @@ automatically on container start (see `apps/api/docker-entrypoint.sh`).
 
 ### Deploying to Proxmox as a dedicated LXC
 
-`infra/proxmox/` adapts the [community-scripts.org](https://community-scripts.org) Proxmox VE
-Helper-Scripts pattern to this app: `ct/omnianote.sh` runs on the Proxmox host and creates a new
-unprivileged Debian LXC (using the same `build.func` container-creation framework
-community-scripts uses); `install/omnianote-install.sh` runs inside that container, installs
+`infra/proxmox/deploy.sh` runs on the Proxmox host: it creates an unprivileged Debian 13 LXC with
+`pct create`, then runs `infra/proxmox/install/omnianote-install.sh` inside it, which installs
 Docker, clones this repo, generates every secret in `infra/.env` automatically, and brings up the
-full stack.
+full stack. The install script is written in the same style as
+[community-scripts.org](https://community-scripts.org)'s "addon" scripts — it sources their
+`misc/core.func` / `misc/tools.func` for the colored output and `ensure_docker` helper — but it is
+**not** one of their catalog scripts and doesn't use their `build.func` container-creation
+framework, because that framework hardcodes its install-script fetch to their own repo and can't
+be pointed at a third-party one.
 
-Run as root on the Proxmox host:
+This repo is private, so every fetch from it needs a GitHub token — `raw.githubusercontent.com`
+404s on an unauthenticated request to a private repo, it doesn't 401/403. Create a fine-grained
+personal access token scoped to just this repo with **Contents: Read-only** at
+[github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new),
+then run as root on the Proxmox host:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/ct/omnianote.sh)"
+GH_TOKEN=github_pat_xxx bash -c "$(curl -fsSL -H "Authorization: token $GH_TOKEN" \
+  https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/deploy.sh)"
 ```
 
-Re-running the same command against an existing container updates it (`git pull` +
-`docker compose up -d --build`) instead of creating a second one.
+That line puts the token in your shell history — revoke or rotate it once you're done deploying,
+or prefix the command with a space if your shell has `HISTCONTROL=ignorespace` set.
+
+Re-running the command against the same container ID updates it (`git pull` + rebuild) instead of
+creating a second one.
+
+**Caveat:** the Docker stack this installs (`ensure_docker`, the `docker compose` build and boot)
+is validated — I built and ran the exact same image and Compose file locally end-to-end before
+writing this script. The `pct create`/`pveam` container-creation step in `deploy.sh` is not — there
+is no Proxmox host available to test it against, so treat the prompts and flags as a best-effort
+implementation of the standard `pct` workflow rather than something proven to work on your exact
+Proxmox version/storage layout.
 
 ## Conventions worth knowing before extending this
 

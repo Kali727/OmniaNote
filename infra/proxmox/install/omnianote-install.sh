@@ -1,55 +1,86 @@
 #!/usr/bin/env bash
-# OmniaNote — installed inside the LXC by ct/omnianote.sh via community-scripts' build.func.
-# Not meant to be run standalone outside that flow (it relies on $FUNCTIONS_FILE_PATH,
-# $STD, msg_info/msg_ok, etc. being injected by build.func first).
+# OmniaNote — runs INSIDE the LXC. Fetched and executed by ../deploy.sh via `pct exec`.
+#
+# Standalone (addon-style), unlike a classic community-scripts ct+install pair: it does
+# NOT rely on $FUNCTIONS_FILE_PATH being pre-injected by build.func, because build.func's
+# install-script fetch is hardcoded to community-scripts' own repo and can't be pointed
+# at ours. Instead this sources their misc/*.func libraries directly, the same way their
+# own tools/addon/*.sh scripts do.
 
-OMNIANOTE_REPO_URL="${OMNIANOTE_REPO_URL:-https://github.com/Kali727/OmniaNote.git}"
+if ! command -v curl &>/dev/null; then
+  apt-get update -y >/dev/null 2>&1
+  apt-get install -y curl >/dev/null 2>&1
+fi
+source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/core.func)
+source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/tools.func)
+source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/error_handler.func)
+load_functions
+header_info
+confirm_not_pve_host
+get_lxc_ip
 
-source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
-color
-verb_ip6
-catch_errors
-setting_up_container
-network_check
-update_os
+set -Eeuo pipefail
+trap 'error_handler' ERR
 
-msg_info "Installing Git"
-$STD apt-get install -y git
-msg_ok "Installed Git"
+APP="OmniaNote"
+INSTALL_PATH="/opt/omnianote"
+COMPOSE_FILE="${INSTALL_PATH}/infra/docker-compose.yml"
+ENV_FILE="${INSTALL_PATH}/infra/.env"
 
-ensure_docker
+: "${OMNIANOTE_REPO_URL:?OMNIANOTE_REPO_URL must be set to a git-clonable URL — deploy.sh sets this for you}"
 
-msg_info "Cloning OmniaNote"
-$STD git clone "$OMNIANOTE_REPO_URL" /opt/omnianote
-msg_ok "Cloned OmniaNote"
+function update() {
+  msg_info "Pulling latest ${APP} code"
+  cd "$INSTALL_PATH"
+  $STD git pull
+  msg_ok "Pulled latest code"
 
-msg_info "Generating configuration"
-ENV_FILE=/opt/omnianote/infra/.env
-cp /opt/omnianote/infra/.env.example "$ENV_FILE"
+  msg_info "Rebuilding and restarting ${APP} (this can take a few minutes)"
+  $STD docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build --remove-orphans
+  msg_ok "Updated ${APP}"
+}
 
-echo -n "${TAB}Domain for this server (leave blank for IP-only / self-signed): "
-read -r OMNIANOTE_DOMAIN
-OMNIANOTE_DOMAIN="${OMNIANOTE_DOMAIN:-localhost}"
+function install() {
+  ensure_docker
 
-# Fill in every placeholder with a real random secret — nothing in .env.example is usable as-is.
-sed -i \
-  -e "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 24)|" \
-  -e "s|^S3_ACCESS_KEY_ID=.*|S3_ACCESS_KEY_ID=omnianote|" \
-  -e "s|^S3_SECRET_ACCESS_KEY=.*|S3_SECRET_ACCESS_KEY=$(openssl rand -hex 24)|" \
-  -e "s|^MEILI_MASTER_KEY=.*|MEILI_MASTER_KEY=$(openssl rand -hex 24)|" \
-  -e "s|^JWT_ACCESS_SECRET=.*|JWT_ACCESS_SECRET=$(openssl rand -base64 48)|" \
-  -e "s|^JWT_REFRESH_SECRET=.*|JWT_REFRESH_SECRET=$(openssl rand -base64 48)|" \
-  -e "s|^MFA_TOTP_ENCRYPTION_KEY=.*|MFA_TOTP_ENCRYPTION_KEY=$(openssl rand -base64 32)|" \
-  -e "s|^DOMAIN=.*|DOMAIN=${OMNIANOTE_DOMAIN}|" \
-  -e "s|^CORS_ORIGIN=.*|CORS_ORIGIN=https://${OMNIANOTE_DOMAIN}|" \
-  "$ENV_FILE"
-msg_ok "Generated configuration ($ENV_FILE)"
+  msg_info "Cloning ${APP}"
+  $STD git clone "$OMNIANOTE_REPO_URL" "$INSTALL_PATH"
+  msg_ok "Cloned ${APP}"
 
-msg_info "Building and starting OmniaNote (this takes a few minutes on first run)"
-cd /opt/omnianote
-$STD docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build
-msg_ok "Started OmniaNote"
+  msg_info "Generating configuration"
+  cp "${INSTALL_PATH}/infra/.env.example" "$ENV_FILE"
 
-motd_ssh
-customize
-cleanup_lxc
+  echo -n "${TAB:-  }Domain for this server (leave blank for IP-only / self-signed): "
+  local domain
+  read -r domain
+  domain="${domain:-localhost}"
+
+  # Fill in every placeholder with a real random secret — nothing in .env.example is usable as-is.
+  sed -i \
+    -e "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 24)|" \
+    -e "s|^S3_ACCESS_KEY_ID=.*|S3_ACCESS_KEY_ID=omnianote|" \
+    -e "s|^S3_SECRET_ACCESS_KEY=.*|S3_SECRET_ACCESS_KEY=$(openssl rand -hex 24)|" \
+    -e "s|^MEILI_MASTER_KEY=.*|MEILI_MASTER_KEY=$(openssl rand -hex 24)|" \
+    -e "s|^JWT_ACCESS_SECRET=.*|JWT_ACCESS_SECRET=$(openssl rand -base64 48)|" \
+    -e "s|^JWT_REFRESH_SECRET=.*|JWT_REFRESH_SECRET=$(openssl rand -base64 48)|" \
+    -e "s|^MFA_TOTP_ENCRYPTION_KEY=.*|MFA_TOTP_ENCRYPTION_KEY=$(openssl rand -base64 32)|" \
+    -e "s|^DOMAIN=.*|DOMAIN=${domain}|" \
+    -e "s|^CORS_ORIGIN=.*|CORS_ORIGIN=https://${domain}|" \
+    "$ENV_FILE"
+  msg_ok "Generated configuration (${ENV_FILE})"
+
+  msg_info "Building and starting ${APP} (this takes a few minutes on first run)"
+  cd "$INSTALL_PATH"
+  $STD docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build
+  msg_ok "Started ${APP}"
+
+  echo ""
+  msg_ok "${APP} is reachable at: ${BL}http://${LOCAL_IP}${CL}"
+}
+
+if [[ -d "$INSTALL_PATH/.git" ]]; then
+  msg_warn "${APP} is already installed at ${INSTALL_PATH} — updating instead of reinstalling."
+  update
+else
+  install
+fi
