@@ -3,8 +3,7 @@
 # Not meant to be run standalone outside that flow (it relies on $FUNCTIONS_FILE_PATH,
 # $STD, msg_info/msg_ok, etc. being injected by build.func first).
 
-# TODO: replace once the repo is pushed to GitHub — see README "Deploying to Proxmox".
-FIELDNOTES_REPO_URL="${FIELDNOTES_REPO_URL:-https://github.com/REPLACE_ME/fieldnotes.git}"
+FIELDNOTES_REPO_URL="${FIELDNOTES_REPO_URL:-https://github.com/Kali727/OmniaNote.git}"
 
 source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
 color
@@ -19,12 +18,6 @@ $STD apt-get install -y git
 msg_ok "Installed Git"
 
 ensure_docker
-
-if [[ "$FIELDNOTES_REPO_URL" == *"REPLACE_ME"* ]]; then
-  msg_error "FIELDNOTES_REPO_URL is still the placeholder — re-run with:"
-  echo -e "${TAB}FIELDNOTES_REPO_URL=https://github.com/you/fieldnotes.git bash -c \"\$(curl -fsSL .../ct/fieldnotes.sh)\""
-  exit 1
-fi
 
 msg_info "Cloning Field Notes"
 $STD git clone "$FIELDNOTES_REPO_URL" /opt/fieldnotes

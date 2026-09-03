@@ -76,13 +76,10 @@ community-scripts uses); `install/fieldnotes-install.sh` runs inside that contai
 Docker, clones this repo, generates every secret in `infra/.env` automatically, and brings up the
 full stack.
 
-**This only works once the repo is pushed to GitHub** — `install/fieldnotes-install.sh` clones
-from a real URL, currently a `REPLACE_ME` placeholder. Once that's done, the one-liner (run as
-root on the Proxmox host) is:
+Run as root on the Proxmox host:
 
 ```bash
-FIELDNOTES_REPO_URL=https://github.com/<you>/<repo>.git \
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/<you>/<repo>/main/infra/proxmox/ct/fieldnotes.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/ct/fieldnotes.sh)"
 ```
 
 Re-running the same command against an existing container updates it (`git pull` +
