@@ -50,11 +50,13 @@ letting an account exceed its plan).
 ## MFA
 
 TOTP is the primary factor (`apps/api/src/auth/totp.service.ts`, via `otplib`) — free, offline,
-no per-message cost. SMS/email OTP is the fallback the product spec asked for, implemented as a
-generic "challenge" (`mfa-challenge.service.ts`) backed by short-TTL Redis keys rather than a
-database table, since a pending OTP is inherently ephemeral. `notifications/notification.service.ts`
-is currently a stub that logs the code — swap in Twilio (SMS) and SES/Postmark (email) behind that
-same interface before going anywhere near production.
+no per-message cost. Email OTP is the fallback, sent via Resend (`notifications/notification.service.ts`)
+with a log-to-stdout fallback when `RESEND_API_KEY` isn't set. SMS is deliberately unimplemented —
+it costs money per message and was dropped in favor of email-only. The login-time OTP challenge
+(`mfa-challenge.service.ts`) and the enrollment flow (`mfa-enrollment.service.ts`, one pair of
+endpoints per method) both use short-TTL Redis keys rather than a database table, since a pending
+code is inherently ephemeral. Enrollment is reachable from the mobile app's Settings screen
+(`apps/mobile/src/pages/SettingsPage.tsx`), not just the API.
 
 ## What's scaffolded but not yet wired up
 
@@ -71,8 +73,15 @@ no application code uses them yet:
 - **Native home-screen widget** — per the product brief, this needs real Swift WidgetKit and
   Android AppWidget code alongside the Capacitor shell; it isn't a Capacitor plugin you install.
 
+## Backups
+
+`infra/backup/` — a nightly `pg_dump` plus, when `BACKUP_S3_*` is configured, an `mc mirror` of
+both the dump and the media bucket to any S3-compatible off-site target (Cloudflare R2 is the
+natural fit given the deploy already sits behind Cloudflare Tunnel). Local-only by default. See
+`infra/backup/backup.sh`.
+
 ## What's implemented end-to-end
 
-Register/login with TOTP MFA enrollment and verification, JWT access + rotating refresh tokens,
-locations/folders/spots with tier-limit enforcement, and the full item capture flow (create →
-presigned upload → confirm → file from Inbox → favorite → attach to a note).
+Register/login with TOTP or email MFA enrollment and verification, JWT access + rotating refresh
+tokens, locations/folders/spots with tier-limit enforcement, the full item capture flow (create →
+presigned upload → confirm → file from Inbox → favorite → attach to a note), and automated backups.
