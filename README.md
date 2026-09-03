@@ -80,24 +80,11 @@ full stack. The install script is written in the same style as
 framework, because that framework hardcodes its install-script fetch to their own repo and can't
 be pointed at a third-party one.
 
-This repo is private, so every fetch from it needs a GitHub token — `raw.githubusercontent.com`
-404s on an unauthenticated request to a private repo, it doesn't 401/403. Create a fine-grained
-personal access token scoped to just this repo with **Contents: Read-only** at
-[github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new),
-then run as root on the Proxmox host:
+The repo is public, so no token is needed. Run as root on the Proxmox host:
 
 ```bash
-export GH_TOKEN=github_pat_xxx
-bash -c "$(curl -fsSL -H "Authorization: token $GH_TOKEN" \
-  https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/deploy.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/deploy.sh)"
 ```
-
-`GH_TOKEN` has to be `export`ed as its own step — a same-line prefix (`GH_TOKEN=x bash -c "..."`)
-isn't visible to that command's own argument expansion, so the `$GH_TOKEN` inside the `curl -H`
-above would silently expand to empty and 404 instead of authenticating.
-
-This puts the token in your shell history — revoke or rotate it once you're done deploying, or
-prefix both lines with a space if your shell has `HISTCONTROL=ignorespace` set.
 
 Re-running the command against the same container ID updates it (`git pull` + rebuild) instead of
 creating a second one.

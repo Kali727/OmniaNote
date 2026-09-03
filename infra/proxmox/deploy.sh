@@ -1,23 +1,7 @@
 #!/usr/bin/env bash
 # OmniaNote — Proxmox VE deploy script. Run this on the Proxmox host, as root.
 #
-# The OmniaNote repo is private, so every fetch from it needs a GitHub token —
-# raw.githubusercontent.com returns 404 (not 401/403) for an unauthenticated request
-# to a private repo. Create a fine-grained personal access token scoped to just this
-# repo with "Contents: Read-only" at https://github.com/settings/personal-access-tokens/new,
-# then run:
-#
-#   export GH_TOKEN=github_pat_xxx
-#   bash -c "$(curl -fsSL -H "Authorization: token $GH_TOKEN" \
-#     https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/deploy.sh)"
-#
-# GH_TOKEN must be `export`ed as its own step, not a same-line prefix (`GH_TOKEN=x cmd`) —
-# a prefix assignment isn't visible to that same command's own argument expansion, so the
-# $GH_TOKEN inside the curl -H above would silently expand to empty and 404.
-#
-# Security note: this puts the token in your shell history. Revoke/rotate it once you're
-# done deploying, or prefix both lines with a space if HISTCONTROL=ignorespace is set.
-# `unset GH_TOKEN` when you're finished if you'd rather it not linger in this session.
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/deploy.sh)"
 #
 # Re-running this same command against an existing container's CTID updates it
 # (git pull + rebuild) instead of creating a second one.
@@ -27,11 +11,9 @@ set -Eeuo pipefail
 REPO_OWNER="Kali727"
 REPO_NAME="OmniaNote"
 REPO_RAW_BASE="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main"
+CLONE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}.git"
 
 command -v pct >/dev/null 2>&1 || { echo "This must run on a Proxmox VE host (pct not found)." >&2; exit 1; }
-: "${GH_TOKEN:?Set GH_TOKEN to a token that can read the private ${REPO_OWNER}/${REPO_NAME} repo, then re-run.}"
-
-CLONE_URL="https://${GH_TOKEN}@github.com/${REPO_OWNER}/${REPO_NAME}.git"
 
 echo "== OmniaNote Proxmox deploy =="
 echo ""
@@ -94,9 +76,9 @@ for _ in $(seq 1 30); do
 done
 
 echo "Fetching the installer..."
-INSTALL_SCRIPT="$(curl -fsSL -H "Authorization: token ${GH_TOKEN}" "${REPO_RAW_BASE}/infra/proxmox/install/omnianote-install.sh")"
+INSTALL_SCRIPT="$(curl -fsSL "${REPO_RAW_BASE}/infra/proxmox/install/omnianote-install.sh")"
 if [[ -z "$INSTALL_SCRIPT" ]]; then
-  echo "Failed to fetch the install script — check that GH_TOKEN is valid and can read ${REPO_OWNER}/${REPO_NAME}." >&2
+  echo "Failed to fetch the install script from ${REPO_RAW_BASE}." >&2
   exit 1
 fi
 
