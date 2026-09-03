@@ -83,11 +83,14 @@ be pointed at a third-party one.
 The repo is public, so no token is needed. Run as root on the Proxmox host:
 
 ```bash
-bash -c "$(curl -fsSL "https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/deploy.sh?cb=$(date +%s)")"
+bash -c "$(curl -fsSL -H "Accept: application/vnd.github.raw" \
+  "https://api.github.com/repos/Kali727/OmniaNote/contents/infra/proxmox/deploy.sh?ref=main")"
 ```
 
-(The `?cb=...` is a cache-buster — `raw.githubusercontent.com` caches responses at the CDN edge for
-a few minutes, which can serve a stale 404 right after pushing a fix to one of these scripts.)
+This fetches through the GitHub API rather than `raw.githubusercontent.com` on purpose: that CDN
+ignores query strings for its cache key on this content, so a cache-buster does nothing there, and
+a stale cached response (e.g. a 404 from before this repo went public) can outlive its own
+advertised cache lifetime. The API endpoint doesn't have that problem.
 
 Re-running the command against the same container ID updates it (`git pull` + rebuild) instead of
 creating a second one.

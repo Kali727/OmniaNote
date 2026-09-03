@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # OmniaNote — Proxmox VE deploy script. Run this on the Proxmox host, as root.
 #
-#   bash -c "$(curl -fsSL "https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/deploy.sh?cb=$(date +%s)")"
+#   bash -c "$(curl -fsSL -H "Accept: application/vnd.github.raw" \
+#     "https://api.github.com/repos/Kali727/OmniaNote/contents/infra/proxmox/deploy.sh?ref=main")"
+#
+# Fetched via the GitHub API rather than raw.githubusercontent.com on purpose: that CDN
+# ignores query strings for its cache key on this content, so a query-string cache-buster
+# does nothing, and a stale cached response (e.g. a 404 from before this repo went public)
+# can persist well past its advertised max-age. The API endpoint doesn't have that problem.
 #
 # Re-running this same command against an existing container's CTID updates it
 # (git pull + rebuild) instead of creating a second one.
@@ -10,7 +16,7 @@ set -Eeuo pipefail
 
 REPO_OWNER="Kali727"
 REPO_NAME="OmniaNote"
-REPO_RAW_BASE="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main"
+REPO_CONTENTS_API="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents"
 CLONE_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}.git"
 
 command -v pct >/dev/null 2>&1 || { echo "This must run on a Proxmox VE host (pct not found)." >&2; exit 1; }
@@ -76,12 +82,10 @@ for _ in $(seq 1 30); do
 done
 
 echo "Fetching the installer..."
-# Cache-bust: raw.githubusercontent.com caches responses (including a stale 404 from
-# before this repo went public) for a few minutes at the CDN edge; a unique query
-# string forces a fresh fetch instead of waiting out the cache.
-INSTALL_SCRIPT="$(curl -fsSL "${REPO_RAW_BASE}/infra/proxmox/install/omnianote-install.sh?cb=$(date +%s)")"
+INSTALL_SCRIPT="$(curl -fsSL -H "Accept: application/vnd.github.raw" \
+  "${REPO_CONTENTS_API}/infra/proxmox/install/omnianote-install.sh?ref=main")"
 if [[ -z "$INSTALL_SCRIPT" ]]; then
-  echo "Failed to fetch the install script from ${REPO_RAW_BASE}." >&2
+  echo "Failed to fetch the install script from ${REPO_CONTENTS_API}." >&2
   exit 1
 fi
 
