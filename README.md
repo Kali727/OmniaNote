@@ -93,7 +93,12 @@ a stale cached response (e.g. a 404 from before this repo went public) can outli
 advertised cache lifetime. The API endpoint doesn't have that problem.
 
 Re-running the command against the same container ID updates it (`git pull` + rebuild) instead of
-creating a second one.
+creating a second one. The installer also drops an `update` command inside the container itself, so
+day to day you don't need the Proxmox host at all:
+
+```bash
+pct exec 114 -- update    # from the Proxmox host, or just `update` from a shell inside the container
+```
 
 **Caveat:** the Docker stack this installs (`ensure_docker`, the `docker compose` build and boot)
 is validated — I built and ran the exact same image and Compose file locally end-to-end before

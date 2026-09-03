@@ -27,7 +27,20 @@ INSTALL_PATH="/opt/omnianote"
 COMPOSE_FILE="${INSTALL_PATH}/infra/docker-compose.yml"
 ENV_FILE="${INSTALL_PATH}/infra/.env"
 
-: "${OMNIANOTE_REPO_URL:?OMNIANOTE_REPO_URL must be set to a git-clonable URL — deploy.sh sets this for you}"
+INSTALL_SCRIPT_API="https://api.github.com/repos/Kali727/OmniaNote/contents/infra/proxmox/install/omnianote-install.sh?ref=main"
+
+# Lets you update from inside the container (`update`) instead of re-pasting the deploy
+# one-liner on the Proxmox host each time. It just re-fetches and re-runs this same
+# script — since $INSTALL_PATH/.git already exists by the time this is installed, that
+# always takes the update() branch below, and always runs whatever the current update
+# logic is rather than a copy frozen at install time.
+function install_update_command() {
+  cat >/usr/bin/update <<EOF
+#!/usr/bin/env bash
+bash -c "\$(curl -fsSL -H 'Accept: application/vnd.github.raw' '${INSTALL_SCRIPT_API}')"
+EOF
+  chmod +x /usr/bin/update
+}
 
 function update() {
   msg_info "Pulling latest ${APP} code"
@@ -41,10 +54,16 @@ function update() {
   # container when its own service definition changed, so a Caddyfile-only edit (like a
   # config fix) would otherwise leave caddy running on its stale, already-loaded config.
   $STD docker compose -f infra/docker-compose.yml restart caddy
+  install_update_command
   msg_ok "Updated ${APP}"
 }
 
 function install() {
+  # Only needed for a fresh clone — the update() path re-uses the git remote already
+  # configured from install time, so /usr/bin/update (see install_update_command below)
+  # can run this whole script again later without ever needing to set this itself.
+  : "${OMNIANOTE_REPO_URL:?OMNIANOTE_REPO_URL must be set to a git-clonable URL — deploy.sh sets this for you}"
+
   msg_info "Installing prerequisites"
   $STD apt-get update
   # git for cloning the repo; the rest is Docker's own documented apt-repo prerequisite
@@ -88,10 +107,12 @@ function install() {
   msg_info "Building and starting ${APP} (this takes a few minutes on first run)"
   cd "$INSTALL_PATH"
   $STD docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build
+  install_update_command
   msg_ok "Started ${APP}"
 
   echo ""
   msg_ok "${APP} is reachable at: ${BL}http://${LOCAL_IP}${CL}"
+  echo -e "${TAB}Run ${BL}update${CL} inside this container any time to pull and apply the latest version."
 }
 
 if [[ -d "$INSTALL_PATH/.git" ]]; then
