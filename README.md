@@ -27,7 +27,8 @@ infra/
 Requires Node 20+ and Docker (for the backing services — Postgres, Redis, MinIO, Meilisearch).
 
 ```bash
-npm install                                    # installs all workspaces, builds packages/shared
+npm install
+npm run build:shared                           # apps/api and apps/mobile both import its compiled output
 docker compose -f infra/docker-compose.dev.yml up -d
 cp apps/api/.env.example apps/api/.env         # then fill in the secrets — see comments in the file
 npm run prisma:migrate                         # creates the database schema

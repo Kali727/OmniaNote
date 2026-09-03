@@ -6,7 +6,7 @@
 # Proxmox VE Helper-Scripts pattern (https://github.com/community-scripts/ProxmoxVE) —
 # same build.func container-creation framework, our own install script.
 #
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/<you>/<repo>/main/infra/proxmox/ct/omnianote.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/ct/omnianote.sh)"
 #
 source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
 
