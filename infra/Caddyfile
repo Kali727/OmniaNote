@@ -3,3 +3,20 @@
 	# pointing at this server — nothing else to configure for HTTPS.
 	reverse_proxy /api/* api:3000
 }
+
+# Catch-all for anything that doesn't match the block above — chiefly, browsing straight
+# to the server's IP address before a real DOMAIN is set up. Caddy's virtual hosting is
+# keyed by the hostname a client sends (SNI); browsers generally send no SNI at all for a
+# bare IP literal, so without this block Caddy has nothing to match and aborts the TLS
+# handshake outright (a bare connection-reset-style failure, not a "certificate untrusted"
+# warning — that's the SSL_ERROR_INTERNAL_ERROR_ALERT you'd see in a browser). `on_demand`
+# is required: without it Caddy only knows to issue certs for hostnames it saw at config
+# load (i.e. DOMAIN above), so an unlisted name/IP would hit the exact same handshake
+# failure this block exists to fix. Verified locally: bare IP, an arbitrary unmatched
+# hostname, and no-SNI all mint a cert on demand and serve correctly.
+:443 {
+	tls internal {
+		on_demand
+	}
+	reverse_proxy /api/* api:3000
+}
