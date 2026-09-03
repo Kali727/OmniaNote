@@ -41,6 +41,14 @@ function update() {
 }
 
 function install() {
+  msg_info "Installing prerequisites"
+  $STD apt-get update
+  # git for cloning the repo; the rest is Docker's own documented apt-repo prerequisite
+  # list (docs.docker.com/engine/install/debian) — this minimal template ships with none
+  # of it, and ensure_docker's repo setup silently depends on all of them being present.
+  $STD apt-get install -y git ca-certificates curl gnupg lsb-release apt-transport-https
+  msg_ok "Installed prerequisites"
+
   ensure_docker
 
   msg_info "Cloning ${APP}"
