@@ -7,13 +7,17 @@
 # repo with "Contents: Read-only" at https://github.com/settings/personal-access-tokens/new,
 # then run:
 #
-#   GH_TOKEN=github_pat_xxx bash -c "$(curl -fsSL -H "Authorization: token $GH_TOKEN" \
+#   export GH_TOKEN=github_pat_xxx
+#   bash -c "$(curl -fsSL -H "Authorization: token $GH_TOKEN" \
 #     https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/deploy.sh)"
 #
-# Security note: with GH_TOKEN set as a command prefix like that, most shells record
-# the full line — token included — in history. Prefix the command with a space if your
-# shell has HISTCONTROL=ignorespace set, or just revoke/rotate the token after you're
-# done deploying.
+# GH_TOKEN must be `export`ed as its own step, not a same-line prefix (`GH_TOKEN=x cmd`) —
+# a prefix assignment isn't visible to that same command's own argument expansion, so the
+# $GH_TOKEN inside the curl -H above would silently expand to empty and 404.
+#
+# Security note: this puts the token in your shell history. Revoke/rotate it once you're
+# done deploying, or prefix both lines with a space if HISTCONTROL=ignorespace is set.
+# `unset GH_TOKEN` when you're finished if you'd rather it not linger in this session.
 #
 # Re-running this same command against an existing container's CTID updates it
 # (git pull + rebuild) instead of creating a second one.
