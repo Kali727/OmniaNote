@@ -23,9 +23,9 @@ run inside the container.
 - [x] Automated backups — nightly Postgres dump + optional off-site mirror
 - [x] Photo thumbnails in the item grid (client-generated, presigned URLs end to end)
 - [x] Photo annotation (finger-drawn markup, flattened at full resolution before upload)
+- [x] Search — Meilisearch wired end to end, scoped per account with an optional location filter
 
 **Next up** (working through these in order — majors first, polish later)
-- [ ] Search (Meilisearch is running but not wired to anything yet)
 - [ ] Maintenance stamp library (Leak / Electrical / Safety Hazard / etc.)
 - [ ] Location/asset history UI (the `by-spot` endpoint exists; nothing in the app surfaces it)
 - [ ] Voice-note dictation
