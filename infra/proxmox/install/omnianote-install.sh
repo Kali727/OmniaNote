@@ -37,6 +37,10 @@ function update() {
 
   msg_info "Rebuilding and restarting ${APP} (this can take a few minutes)"
   $STD docker compose -f infra/docker-compose.yml --env-file infra/.env up -d --build --remove-orphans
+  # infra/Caddyfile is bind-mounted, not baked into an image — `up -d` only recreates a
+  # container when its own service definition changed, so a Caddyfile-only edit (like a
+  # config fix) would otherwise leave caddy running on its stale, already-loaded config.
+  $STD docker compose -f infra/docker-compose.yml restart caddy
   msg_ok "Updated ${APP}"
 }
 
