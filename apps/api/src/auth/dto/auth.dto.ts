@@ -2,6 +2,7 @@ import { createZodDto } from "nestjs-zod";
 import {
   loginSchema,
   mfaChallengeVerifySchema,
+  mfaEnrollEmailVerifySchema,
   mfaEnrollTotpVerifySchema,
   refreshTokenSchema,
   registerSchema,
@@ -14,4 +15,5 @@ export class RegisterDto extends createZodDto(registerSchema) {}
 export class LoginDto extends createZodDto(loginSchema) {}
 export class MfaChallengeVerifyDto extends createZodDto(mfaChallengeVerifySchema) {}
 export class MfaEnrollTotpVerifyDto extends createZodDto(mfaEnrollTotpVerifySchema) {}
+export class MfaEnrollEmailVerifyDto extends createZodDto(mfaEnrollEmailVerifySchema) {}
 export class RefreshTokenDto extends createZodDto(refreshTokenSchema) {}

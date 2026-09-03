@@ -25,6 +25,13 @@ export const envSchema = z.object({
   REDIS_URL: z.string().default("redis://localhost:6379"),
 
   CORS_ORIGIN: z.string().default("*"),
+
+  // Optional: leave unset and MFA email codes just log to stdout instead of sending —
+  // convenient for local dev, not something you want in production. Resend's shared
+  // onboarding@resend.dev sender needs no domain verification, so this works with a
+  // free account before you've set up a verified sending domain.
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().default("OmniaNote <onboarding@resend.dev>"),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

@@ -27,7 +27,12 @@ export default function HomePage() {
 
   return (
     <div className="screen">
-      <div className="topbar">OmniaNote</div>
+      <div className="topbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>OmniaNote</span>
+        <button onClick={() => navigate("/settings")} style={{ background: "none", border: "none", color: "inherit", fontSize: "1.1rem" }} aria-label="Settings">
+          ⚙️
+        </button>
+      </div>
       <div className="screen__content">
         {inboxCount > 0 && (
           <p className="empty-state">

@@ -110,6 +110,21 @@ export class AuthService {
     await this.prisma.refreshToken.updateMany({ where: { tokenHash }, data: { revokedAt: new Date() } });
   }
 
+  async getProfile(userId: string) {
+    return this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        mobileNumber: true,
+        role: true,
+        mfaEnabled: true,
+        mfaPreferred: true,
+      },
+    });
+  }
+
   private async issueTokens(userId: string): Promise<AuthTokens> {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { accountId: true } });
     const accessToken = await this.jwt.signAsync(

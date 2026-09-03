@@ -36,6 +36,11 @@ export const mfaEnrollTotpVerifySchema = z.object({
 });
 export type MfaEnrollTotpVerifyInput = z.infer<typeof mfaEnrollTotpVerifySchema>;
 
+export const mfaEnrollEmailVerifySchema = z.object({
+  code: z.string().length(6).regex(/^\d+$/),
+});
+export type MfaEnrollEmailVerifyInput = z.infer<typeof mfaEnrollEmailVerifySchema>;
+
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1),
 });
