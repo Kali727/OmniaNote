@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # OmniaNote — Proxmox VE deploy script. Run this on the Proxmox host, as root.
 #
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/deploy.sh)"
+#   bash -c "$(curl -fsSL "https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/deploy.sh?cb=$(date +%s)")"
 #
 # Re-running this same command against an existing container's CTID updates it
 # (git pull + rebuild) instead of creating a second one.
@@ -76,7 +76,10 @@ for _ in $(seq 1 30); do
 done
 
 echo "Fetching the installer..."
-INSTALL_SCRIPT="$(curl -fsSL "${REPO_RAW_BASE}/infra/proxmox/install/omnianote-install.sh")"
+# Cache-bust: raw.githubusercontent.com caches responses (including a stale 404 from
+# before this repo went public) for a few minutes at the CDN edge; a unique query
+# string forces a fresh fetch instead of waiting out the cache.
+INSTALL_SCRIPT="$(curl -fsSL "${REPO_RAW_BASE}/infra/proxmox/install/omnianote-install.sh?cb=$(date +%s)")"
 if [[ -z "$INSTALL_SCRIPT" ]]; then
   echo "Failed to fetch the install script from ${REPO_RAW_BASE}." >&2
   exit 1
