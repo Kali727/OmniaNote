@@ -1,0 +1,5 @@
+{$DOMAIN:localhost} {
+	# Caddy issues/renews the TLS cert automatically once DOMAIN is a real hostname
+	# pointing at this server — nothing else to configure for HTTPS.
+	reverse_proxy /api/* api:3000
+}

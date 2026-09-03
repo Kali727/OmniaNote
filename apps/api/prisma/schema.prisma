@@ -1,0 +1,257 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountTier {
+  FREE
+  BASIC
+  PREMIUM
+  CORPORATE
+}
+
+enum AccountRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ItemType {
+  PHOTO
+  VIDEO
+  PDF
+  NOTE
+}
+
+enum StampType {
+  LEAK
+  ELECTRICAL
+  SAFETY_HAZARD
+  PARTS_NEEDED
+  FIXED
+}
+
+enum MfaMethod {
+  TOTP
+  SMS
+  EMAIL
+}
+
+enum SubscriptionStore {
+  APPLE
+  GOOGLE
+  CORPORATE_SALES
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  GRACE_PERIOD
+  EXPIRED
+  CANCELLED
+}
+
+// One Account = one billing/storage unit. A user always belongs to exactly one
+// account for now; AccountRole exists so a future "invite a teammate" feature
+// doesn't require a schema change.
+model Account {
+  id               String      @id @default(uuid())
+  tier             AccountTier @default(FREE)
+  storageUsedBytes BigInt      @default(0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  users         User[]
+  locations     Location[]
+  items         Item[]
+  tags          Tag[]
+  subscriptions Subscription[]
+}
+
+model User {
+  id           String      @id @default(uuid())
+  accountId    String
+  account      Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  email        String      @unique
+  username     String      @unique
+  passwordHash String
+  mobileNumber String
+  role         AccountRole @default(OWNER)
+
+  mfaEnabled       Boolean    @default(false)
+  mfaPreferred     MfaMethod?
+  mfaTotpSecret    String? // encrypted at rest by the app layer, never returned via API
+  mfaBackupCodes   MfaBackupCode[]
+  refreshTokens    RefreshToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountId])
+}
+
+model MfaBackupCode {
+  id       String    @id @default(uuid())
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash String
+  usedAt   DateTime?
+
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  folders Folder[]
+  spots   Spot[]
+  items   Item[]
+
+  @@index([accountId])
+}
+
+model Folder {
+  id             String   @id @default(uuid())
+  locationId     String
+  location       Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  parentFolderId String?
+  parentFolder   Folder?  @relation("FolderToFolder", fields: [parentFolderId], references: [id], onDelete: Cascade)
+  childFolders   Folder[] @relation("FolderToFolder")
+  name           String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  items Item[]
+
+  @@index([locationId])
+  @@index([parentFolderId])
+}
+
+// A recurring place or piece of equipment (e.g. "AC Unit, Room 312") that items can be
+// pinned to independently of which folder they're filed in. This is what powers the
+// asset/location history timeline described in the product brief.
+model Spot {
+  id         String   @id @default(uuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name       String
+  createdAt  DateTime @default(now())
+
+  items Item[]
+
+  @@index([locationId])
+}
+
+model Tag {
+  id        String  @id @default(uuid())
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name      String
+
+  items ItemTag[]
+
+  @@unique([accountId, name])
+}
+
+// The core unit: a photo, video, PDF, or note. locationId/folderId are nullable —
+// a freshly captured item lives in the account's Inbox (locationId = null) until
+// it's filed, per the capture-first flow.
+model Item {
+  id        String   @id @default(uuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  folderId   String?
+  folder     Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  spotId     String?
+  spot       Spot?     @relation(fields: [spotId], references: [id], onDelete: SetNull)
+
+  type  ItemType
+  title String
+  body  String? // note text body; unused for PHOTO/VIDEO/PDF
+
+  storageKey    String? // object key in MinIO/S3; null for a text-only NOTE
+  thumbnailKey  String?
+  mimeType      String?
+  storageBytes  BigInt    @default(0)
+  ocrText       String? // extracted text for search, filled in by a background worker
+
+  stamps        StampType[]
+  isFavorite    Boolean     @default(false)
+  createdByUserId String
+
+  clientCreatedAt DateTime // timestamp from the device at capture time, preserved through offline sync
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tags        ItemTag[]
+  attachments NoteAttachment[] @relation("NoteToAttachment")
+  attachedTo  NoteAttachment[] @relation("AttachmentToNote")
+
+  @@index([accountId, locationId])
+  @@index([accountId, folderId])
+  @@index([spotId])
+  @@index([accountId, isFavorite])
+}
+
+model ItemTag {
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, tagId])
+}
+
+// Lets a NOTE item reference a PHOTO/VIDEO/PDF item as a discrete attachment
+// (Outlook-style) instead of embedding it, so the same media object can be
+// attached to more than one note without duplicating storage.
+model NoteAttachment {
+  noteItemId       String
+  noteItem         Item   @relation("NoteToAttachment", fields: [noteItemId], references: [id], onDelete: Cascade)
+  attachmentItemId String
+  attachmentItem   Item   @relation("AttachmentToNote", fields: [attachmentItemId], references: [id], onDelete: Cascade)
+
+  @@id([noteItemId, attachmentItemId])
+}
+
+// Tracks tier entitlement over time. The current row per account (by updatedAt)
+// is the source of truth consumed by TIER_LIMITS checks; history is kept for
+// support/audit rather than derived on the fly.
+model Subscription {
+  id                 String             @id @default(uuid())
+  accountId          String
+  account            Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tier               AccountTier
+  store              SubscriptionStore
+  status             SubscriptionStatus
+  externalReference  String? // RevenueCat entitlement/transaction id; null for CORPORATE_SALES
+  currentPeriodEnd   DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([accountId])
+}

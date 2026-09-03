@@ -1,0 +1,24 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+
+# prisma
+apps/api/generated/
+
+# capacitor / mobile native
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/.capacitor/
+
+# editors / os
+.DS_Store
+.vscode/
+.idea/
+
+# docker volumes captured locally
+infra/data/
