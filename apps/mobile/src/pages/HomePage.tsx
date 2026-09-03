@@ -2,14 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { itemsApi, type Item } from "../lib/items";
 import { locationsApi, type Location } from "../lib/locations";
-
-function ItemTile({ item }: { item: Item }) {
-  return (
-    <div className="item-tile">
-      <span>{item.title}</span>
-    </div>
-  );
-}
+import { ItemTile } from "../components/ItemTile";
 
 export default function HomePage() {
   const navigate = useNavigate();

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { itemsApi, type Item } from "../lib/items";
 import { locationsApi, type Folder } from "../lib/locations";
+import { ItemTile } from "../components/ItemTile";
 
 export default function LocationPage() {
   const { locationId } = useParams<{ locationId: string }>();
@@ -42,9 +43,7 @@ export default function LocationPage() {
         ) : (
           <div className="item-grid">
             {items.map((item) => (
-              <div key={item.id} className="item-tile">
-                {item.title}
-              </div>
+              <ItemTile key={item.id} item={item} />
             ))}
           </div>
         )}

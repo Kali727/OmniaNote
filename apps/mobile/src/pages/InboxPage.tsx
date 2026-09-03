@@ -28,22 +28,27 @@ export default function InboxPage() {
       <div className="screen__content">
         {items.length === 0 && <p className="empty-state">Everything's filed. Nice.</p>}
         {items.map((item) => (
-          <div key={item.id} className="location-row" style={{ marginBottom: "0.6rem" }}>
-            <div style={{ marginBottom: "0.5rem" }}>{item.title}</div>
-            {locations.length === 1 ? (
-              <button onClick={() => fileItem(item.id, locations[0].id)}>File to {locations[0].name}</button>
-            ) : (
-              <select defaultValue="" onChange={(e) => e.target.value && fileItem(item.id, e.target.value)}>
-                <option value="" disabled>
-                  File to…
-                </option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
+          <div key={item.id} className="location-row" style={{ marginBottom: "0.6rem", display: "flex", gap: "0.75rem", alignItems: "center" }}>
+            {item.thumbnailUrl && (
+              <img src={item.thumbnailUrl} alt="" style={{ width: 48, height: 48, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
             )}
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: "0.5rem" }}>{item.title}</div>
+              {locations.length === 1 ? (
+                <button onClick={() => fileItem(item.id, locations[0].id)}>File to {locations[0].name}</button>
+              ) : (
+                <select defaultValue="" onChange={(e) => e.target.value && fileItem(item.id, e.target.value)}>
+                  <option value="" disabled>
+                    File to…
+                  </option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
         ))}
       </div>

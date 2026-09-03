@@ -1,26 +1,50 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import { itemsApi } from "../lib/items";
+import { AnnotationCanvas } from "../components/AnnotationCanvas";
 
 export default function CapturePage() {
   const navigate = useNavigate();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null);
+  const [annotating, setAnnotating] = useState(false);
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ownedObjectUrl = useRef<string | null>(null);
+
+  useEffect(
+    () => () => {
+      if (ownedObjectUrl.current) URL.revokeObjectURL(ownedObjectUrl.current);
+    },
+    [],
+  );
 
   async function takePhoto() {
-    const photo = await Camera.getPhoto({
-      resultType: CameraResultType.Uri,
-      source: CameraSource.Camera,
-      quality: 85,
-    });
+    let photo;
+    try {
+      photo = await Camera.getPhoto({
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+        quality: 85,
+      });
+    } catch {
+      return; // user backed out of the camera/picker — not an error
+    }
     if (!photo.webPath) return;
     const blob = await fetch(photo.webPath).then((r) => r.blob());
     setPhotoBlob(blob);
     setPhotoPreview(photo.webPath);
+  }
+
+  function applyAnnotation(annotated: Blob) {
+    if (ownedObjectUrl.current) URL.revokeObjectURL(ownedObjectUrl.current);
+    const url = URL.createObjectURL(annotated);
+    ownedObjectUrl.current = url;
+    setPhotoBlob(annotated);
+    setPhotoPreview(url);
+    setAnnotating(false);
   }
 
   async function save() {
@@ -40,6 +64,10 @@ export default function CapturePage() {
     }
   }
 
+  if (annotating && photoPreview) {
+    return <AnnotationCanvas imageUrl={photoPreview} onDone={applyAnnotation} onCancel={() => setAnnotating(false)} />;
+  }
+
   return (
     <div className="screen">
       <div className="topbar">
@@ -54,7 +82,14 @@ export default function CapturePage() {
           </button>
         ) : (
           <>
-            <img src={photoPreview} alt="Captured" style={{ width: "100%", borderRadius: 12, marginBottom: "1rem" }} />
+            <img src={photoPreview} alt="Captured" style={{ width: "100%", borderRadius: 12, marginBottom: "0.75rem" }} />
+            <button
+              className="annotate-btn"
+              style={{ width: "100%", marginBottom: "0.75rem", padding: "0.7rem" }}
+              onClick={() => setAnnotating(true)}
+            >
+              ✏️ Annotate
+            </button>
             <input
               placeholder="e.g. stained carpet, room 312"
               value={title}

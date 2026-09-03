@@ -1,5 +1,6 @@
 import type { CreateItemInput, FileItemInput } from "@omnianote/shared";
 import { apiFetch, uploadToPresignedUrl } from "./apiClient";
+import { createThumbnail } from "./thumbnail";
 
 export interface Item {
   id: string;
@@ -11,6 +12,7 @@ export interface Item {
   spotId: string | null;
   isFavorite: boolean;
   clientCreatedAt: string;
+  thumbnailUrl?: string | null;
 }
 
 export const itemsApi = {
@@ -21,7 +23,10 @@ export const itemsApi = {
     apiFetch<Item[]>(`/items/by-folder?locationId=${locationId}${folderId ? `&folderId=${folderId}` : ""}`),
 
   create: (input: CreateItemInput) =>
-    apiFetch<{ item: Item; uploadUrl: string | null }>("/items", { method: "POST", body: JSON.stringify(input) }),
+    apiFetch<{ item: Item; uploadUrl: string | null; thumbnailUploadUrl: string | null }>("/items", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
 
   confirmUpload: (itemId: string, storageBytes: number, mimeType: string) =>
     apiFetch(`/items/${itemId}/uploaded`, { method: "POST", body: JSON.stringify({ storageBytes, mimeType }) }),
@@ -31,7 +36,9 @@ export const itemsApi = {
 
   toggleFavorite: (itemId: string) => apiFetch<Item>(`/items/${itemId}/favorite`, { method: "PATCH" }),
 
-  /** Full capture-to-inbox flow for a photo/video/pdf: create the metadata row, then push the bytes. */
+  /** Full capture-to-inbox flow for a photo/video/pdf: create the metadata row, then push
+   *  the original bytes and (for photos) a client-generated thumbnail. A thumbnail failure
+   *  never blocks the capture — the item just falls back to its type icon in the grid. */
   async captureMedia(
     type: "PHOTO" | "VIDEO" | "PDF",
     title: string,
@@ -39,7 +46,7 @@ export const itemsApi = {
     fileExtension: string,
     contentType: string,
   ): Promise<Item> {
-    const { item, uploadUrl } = await itemsApi.create({
+    const { item, uploadUrl, thumbnailUploadUrl } = await itemsApi.create({
       type,
       title,
       fileExtension,
@@ -48,6 +55,14 @@ export const itemsApi = {
     if (uploadUrl) {
       await uploadToPresignedUrl(uploadUrl, file, contentType);
       await itemsApi.confirmUpload(item.id, file.size, contentType);
+    }
+    if (thumbnailUploadUrl) {
+      try {
+        const thumbnail = await createThumbnail(file);
+        await uploadToPresignedUrl(thumbnailUploadUrl, thumbnail, "image/jpeg");
+      } catch {
+        // Non-fatal — the capture itself already succeeded above.
+      }
     }
     return item;
   },

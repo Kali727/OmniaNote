@@ -1,9 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { CreateItemInput, FileItemInput, isWithinStorageLimit, ItemType } from "@omnianote/shared";
+import { Item } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
 
 const MEDIA_TYPES: ItemType[] = [ItemType.PHOTO, ItemType.VIDEO, ItemType.PDF];
+// Only photos get a client-generated thumbnail for now — extracting a video frame or
+// rendering a PDF page needs a real server-side pipeline (BullMQ isn't wired up yet).
+const THUMBNAIL_TYPES: ItemType[] = [ItemType.PHOTO];
 
 @Injectable()
 export class ItemsService {
@@ -24,6 +28,9 @@ export class ItemsService {
     }
 
     const storageKey = isMedia ? this.storage.buildObjectKey(accountId, "original", input.fileExtension!) : null;
+    const thumbnailKey = THUMBNAIL_TYPES.includes(input.type)
+      ? this.storage.buildObjectKey(accountId, "thumbnail", "jpg")
+      : null;
 
     const item = await this.prisma.item.create({
       data: {
@@ -37,12 +44,14 @@ export class ItemsService {
         spotId: input.spotId,
         stamps: input.stamps ?? [],
         storageKey,
+        thumbnailKey,
         clientCreatedAt: new Date(input.clientCreatedAt),
       },
     });
 
     const uploadUrl = storageKey ? await this.storage.getUploadUrl(storageKey, `application/octet-stream`) : null;
-    return { item, uploadUrl };
+    const thumbnailUploadUrl = thumbnailKey ? await this.storage.getUploadUrl(thumbnailKey, "image/jpeg") : null;
+    return { item, uploadUrl, thumbnailUploadUrl };
   }
 
   /** Called once the client has PUT the file to `uploadUrl` — now we know the real size. */
@@ -73,36 +82,47 @@ export class ItemsService {
   async get(accountId: string, itemId: string) {
     const item = await this.getOwnedItem(accountId, itemId);
     const downloadUrl = item.storageKey ? await this.storage.getDownloadUrl(item.storageKey) : null;
-    return { item, downloadUrl };
+    const thumbnailUrl = item.thumbnailKey ? await this.storage.getDownloadUrl(item.thumbnailKey) : null;
+    return { item, downloadUrl, thumbnailUrl };
   }
 
   async listInbox(accountId: string) {
-    return this.prisma.item.findMany({
-      where: { accountId, locationId: null },
-      orderBy: { clientCreatedAt: "desc" },
-    });
+    return this.withThumbnailUrls(
+      await this.prisma.item.findMany({
+        where: { accountId, locationId: null },
+        orderBy: { clientCreatedAt: "desc" },
+      }),
+    );
   }
 
   async listRecent(accountId: string, limit = 20) {
-    return this.prisma.item.findMany({ where: { accountId }, orderBy: { clientCreatedAt: "desc" }, take: limit });
+    return this.withThumbnailUrls(
+      await this.prisma.item.findMany({ where: { accountId }, orderBy: { clientCreatedAt: "desc" }, take: limit }),
+    );
   }
 
   async listFavorites(accountId: string) {
-    return this.prisma.item.findMany({
-      where: { accountId, isFavorite: true },
-      orderBy: { clientCreatedAt: "desc" },
-    });
+    return this.withThumbnailUrls(
+      await this.prisma.item.findMany({
+        where: { accountId, isFavorite: true },
+        orderBy: { clientCreatedAt: "desc" },
+      }),
+    );
   }
 
   async listByFolder(accountId: string, locationId: string, folderId: string | null) {
-    return this.prisma.item.findMany({
-      where: { accountId, locationId, folderId },
-      orderBy: { clientCreatedAt: "desc" },
-    });
+    return this.withThumbnailUrls(
+      await this.prisma.item.findMany({
+        where: { accountId, locationId, folderId },
+        orderBy: { clientCreatedAt: "desc" },
+      }),
+    );
   }
 
   async listBySpot(accountId: string, spotId: string) {
-    return this.prisma.item.findMany({ where: { accountId, spotId }, orderBy: { clientCreatedAt: "desc" } });
+    return this.withThumbnailUrls(
+      await this.prisma.item.findMany({ where: { accountId, spotId }, orderBy: { clientCreatedAt: "desc" } }),
+    );
   }
 
   /** Files (or re-files) an item from the Inbox into a location/folder/spot. */
@@ -134,6 +154,17 @@ export class ItemsService {
     return this.prisma.noteAttachment.create({
       data: { noteItemId: note.id, attachmentItemId: attachment.id },
     });
+  }
+
+  /** Attaches a presigned thumbnailUrl to each item that has a thumbnailKey — grid views
+   *  need something to put in an <img src> without a separate round trip per tile. */
+  private async withThumbnailUrls(items: Item[]) {
+    return Promise.all(
+      items.map(async (item) => ({
+        ...item,
+        thumbnailUrl: item.thumbnailKey ? await this.storage.getDownloadUrl(item.thumbnailKey) : null,
+      })),
+    );
   }
 
   private async getOwnedItem(accountId: string, itemId: string) {
