@@ -55,13 +55,17 @@ function install() {
   $STD git clone "$OMNIANOTE_REPO_URL" "$INSTALL_PATH"
   msg_ok "Cloned ${APP}"
 
-  msg_info "Generating configuration"
-  cp "${INSTALL_PATH}/infra/.env.example" "$ENV_FILE"
-
+  # Asked before the msg_info spinner below starts: msg_info leaves a background spinner
+  # running (stopped only by the next msg_info/msg_ok/msg_error) that redraws over
+  # whatever else is on the terminal, which buries an interactive prompt started while
+  # it's still spinning — the prompt still works, it's just invisible.
   echo -n "${TAB:-  }Domain for this server (leave blank for IP-only / self-signed): "
   local domain
   read -r domain
   domain="${domain:-localhost}"
+
+  msg_info "Generating configuration"
+  cp "${INSTALL_PATH}/infra/.env.example" "$ENV_FILE"
 
   # Fill in every placeholder with a real random secret — nothing in .env.example is usable as-is.
   sed -i \
