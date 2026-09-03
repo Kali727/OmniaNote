@@ -8,6 +8,42 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the pieces fit togeth
 stubbed vs. real. Product research and rationale live in the OmniaNote Blueprint (shared
 separately, not checked into this repo).
 
+## Status & TODO
+
+Live at `note.omniahotelsystems.com`, deployed on Proxmox LXC `114`, updated in place with `update`
+run inside the container.
+
+**Done**
+- [x] Monorepo foundation — NestJS/Prisma API, Capacitor mobile shell, shared zod schemas
+- [x] Docker Compose stack + one-command Proxmox deploy (`infra/proxmox/deploy.sh`)
+- [x] Auth — register/login, JWT access + rotating refresh, TOTP MFA, email MFA (Resend)
+- [x] Locations/folders/spots with server-enforced tier limits
+- [x] Item capture flow — photo/video/pdf/note, presigned upload, inbox, filing, favorites, note attachments
+- [x] Settings/Security screen (MFA enrollment) in the mobile app
+- [x] Automated backups — nightly Postgres dump + optional off-site mirror
+
+**Next up** (working through these in order — majors first, polish later)
+- [ ] Thumbnails in the item grid (currently title-only)
+- [ ] Photo annotation (finger-drawn markup)
+- [ ] Search (Meilisearch is running but not wired to anything yet)
+- [ ] Maintenance stamp library (Leak / Electrical / Safety Hazard / etc.)
+- [ ] Location/asset history UI (the `by-spot` endpoint exists; nothing in the app surfaces it)
+- [ ] Voice-note dictation
+- [ ] Visible sync-status UI for offline capture (Queued/Uploading/Synced/Failed)
+
+**Deferred — explicit decisions, revisit later**
+- [ ] Real MFA email delivery — set `RESEND_API_KEY`; codes just log to `docker compose logs api` until then
+- [ ] Team/invite-a-teammate flow — staying solo-account for now. Decided when we do build it: one
+      subscription per Account (already how the schema works), no per-seat charge, teammates just
+      share the account's tier
+- [ ] Billing — RevenueCat or an alternative (Qonversion/Adapty/AppHud/Glassfy) vs. rolling it
+      yourself against Apple/Google directly; Apple + Google dev accounts already exist, deferred
+      until the product's further along
+- [ ] Native iOS/Android builds (`cap add ios`/`android`) — have Mac+Xcode and Android Studio ready,
+      staying on web-based testing until the backend/frontend feature list above is further along
+- [ ] Admin panel — uptime/error monitoring, logs, usage analytics (active users, geography, paying
+      subscriptions) all land here once it exists; no timeline yet
+
 ## Layout
 
 ```
