@@ -68,6 +68,14 @@ docker compose -f infra/docker-compose.yml up -d --build
 Caddy issues its own TLS certificate once `DOMAIN` resolves to the server. Database migrations run
 automatically on container start (see `apps/api/docker-entrypoint.sh`).
 
+### Backups
+
+The `backup` service (`infra/backup/`) dumps Postgres and, if `BACKUP_S3_*` is set in `infra/.env`,
+mirrors both that dump and the media bucket to any S3-compatible off-site target — Cloudflare R2 is
+a natural fit if you're already on Cloudflare. It runs local-only with zero extra setup otherwise,
+but a local-only backup is only as safe as this server's own disk — off-site is what actually makes
+it disaster recovery. See the comments in `infra/.env.example` for the exact vars.
+
 ### Deploying to Proxmox as a dedicated LXC
 
 `infra/proxmox/deploy.sh` runs on the Proxmox host: it creates an unprivileged Debian 13 LXC with
