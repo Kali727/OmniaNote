@@ -3,6 +3,7 @@ import { CreateItemInput, FileItemInput, isWithinStorageLimit, ItemType } from "
 import { Item } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
+import { SearchService } from "../search/search.service";
 
 const MEDIA_TYPES: ItemType[] = [ItemType.PHOTO, ItemType.VIDEO, ItemType.PDF];
 // Only photos get a client-generated thumbnail for now — extracting a video frame or
@@ -14,6 +15,7 @@ export class ItemsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly searchService: SearchService,
   ) {}
 
   /**
@@ -49,6 +51,8 @@ export class ItemsService {
       },
     });
 
+    await this.searchService.indexItem(item);
+
     const uploadUrl = storageKey ? await this.storage.getUploadUrl(storageKey, `application/octet-stream`) : null;
     const thumbnailUploadUrl = thumbnailKey ? await this.storage.getUploadUrl(thumbnailKey, "image/jpeg") : null;
     return { item, uploadUrl, thumbnailUploadUrl };
@@ -65,6 +69,7 @@ export class ItemsService {
     if (!isWithinStorageLimit(account.tier, Number(account.storageUsedBytes), storageBytes)) {
       await this.storage.deleteObject(item.storageKey);
       await this.prisma.item.delete({ where: { id: itemId } });
+      await this.searchService.removeItem(itemId);
       throw new ForbiddenException(`This upload would exceed your ${account.tier} plan's storage limit.`);
     }
 
@@ -132,15 +137,31 @@ export class ItemsService {
     if (!location || location.accountId !== accountId) {
       throw new ForbiddenException("Location does not belong to this account");
     }
-    return this.prisma.item.update({
+    const updated = await this.prisma.item.update({
       where: { id: itemId },
       data: { locationId: input.locationId, folderId: input.folderId, spotId: input.spotId },
     });
+    await this.searchService.indexItem(updated);
+    return updated;
   }
 
   async toggleFavorite(accountId: string, itemId: string) {
     const item = await this.getOwnedItem(accountId, itemId);
-    return this.prisma.item.update({ where: { id: itemId }, data: { isFavorite: !item.isFavorite } });
+    const updated = await this.prisma.item.update({
+      where: { id: itemId },
+      data: { isFavorite: !item.isFavorite },
+    });
+    await this.searchService.indexItem(updated);
+    return updated;
+  }
+
+  async search(accountId: string, query: string, locationId?: string) {
+    const ids = await this.searchService.search(accountId, query, locationId);
+    if (ids.length === 0) return [];
+    const items = await this.prisma.item.findMany({ where: { id: { in: ids }, accountId } });
+    const byId = new Map(items.map((item) => [item.id, item]));
+    const ordered = ids.map((id) => byId.get(id)).filter((item): item is Item => item !== undefined);
+    return this.withThumbnailUrls(ordered);
   }
 
   async attachToNote(accountId: string, noteItemId: string, attachmentItemId: string) {

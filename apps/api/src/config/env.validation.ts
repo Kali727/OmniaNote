@@ -24,6 +24,9 @@ export const envSchema = z.object({
 
   REDIS_URL: z.string().default("redis://localhost:6379"),
 
+  MEILI_HOST: z.string().default("http://localhost:7700"),
+  MEILI_MASTER_KEY: z.string().min(1),
+
   CORS_ORIGIN: z.string().default("*"),
 
   // Optional: leave unset and MFA email codes just log to stdout instead of sending —

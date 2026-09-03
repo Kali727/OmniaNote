@@ -22,9 +22,14 @@ export default function HomePage() {
     <div className="screen">
       <div className="topbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span>OmniaNote</span>
-        <button onClick={() => navigate("/settings")} style={{ background: "none", border: "none", color: "inherit", fontSize: "1.1rem" }} aria-label="Settings">
-          ⚙️
-        </button>
+        <div style={{ display: "flex", gap: "0.9rem" }}>
+          <button onClick={() => navigate("/search")} style={{ background: "none", border: "none", color: "inherit", fontSize: "1.1rem" }} aria-label="Search">
+            🔍
+          </button>
+          <button onClick={() => navigate("/settings")} style={{ background: "none", border: "none", color: "inherit", fontSize: "1.1rem" }} aria-label="Settings">
+            ⚙️
+          </button>
+        </div>
       </div>
       <div className="screen__content">
         {inboxCount > 0 && (

@@ -53,6 +53,11 @@ export class ItemsController {
     return this.items.listBySpot(user.accountId, spotId);
   }
 
+  @Get("search")
+  search(@CurrentUser() user: JwtPayload, @Query("q") q: string, @Query("locationId") locationId?: string) {
+    return this.items.search(user.accountId, q ?? "", locationId);
+  }
+
   @Get(":id")
   get(@CurrentUser() user: JwtPayload, @Param("id", ParseUUIDPipe) id: string) {
     return this.items.get(user.accountId, id);
