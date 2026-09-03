@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import * as argon2 from "argon2";
 import { randomBytes, randomUUID } from "crypto";
-import { MfaMethod } from "@maintnote/shared";
+import { MfaMethod } from "@omnianote/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { TotpService } from "./totp.service";
 

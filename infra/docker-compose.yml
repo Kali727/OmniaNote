@@ -1,17 +1,17 @@
-name: maintnote
+name: omnianote
 
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-maintnote}
+      POSTGRES_USER: ${POSTGRES_USER:-omnianote}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in infra/.env}
-      POSTGRES_DB: ${POSTGRES_DB:-maintnote}
+      POSTGRES_DB: ${POSTGRES_DB:-omnianote}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-maintnote}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omnianote}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -52,7 +52,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set local http://minio:9000 ${S3_ACCESS_KEY_ID} ${S3_SECRET_ACCESS_KEY} &&
-      mc mb --ignore-existing local/${S3_BUCKET:-maintnote-media}
+      mc mb --ignore-existing local/${S3_BUCKET:-omnianote-media}
       "
 
   meilisearch:
@@ -79,10 +79,10 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-maintnote}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-maintnote}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-omnianote}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-omnianote}
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
-      S3_BUCKET: ${S3_BUCKET:-maintnote-media}
+      S3_BUCKET: ${S3_BUCKET:-omnianote-media}
 
   caddy:
     image: caddy:2-alpine

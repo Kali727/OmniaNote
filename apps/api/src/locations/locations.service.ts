@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { isWithinLocationLimit } from "@maintnote/shared";
+import { isWithinLocationLimit } from "@omnianote/shared";
 import { PrismaService } from "../prisma/prisma.service";
-import { CreateFolderInput, CreateLocationInput, CreateSpotInput } from "@maintnote/shared";
+import { CreateFolderInput, CreateLocationInput, CreateSpotInput } from "@omnianote/shared";
 
 @Injectable()
 export class LocationsService {

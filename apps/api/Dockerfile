@@ -1,5 +1,5 @@
 # Build context is the repo root (npm workspaces need the root lockfile + packages/shared):
-#   docker build -f apps/api/Dockerfile -t maintnote-api .
+#   docker build -f apps/api/Dockerfile -t omnianote-api .
 
 FROM node:20-alpine AS builder
 WORKDIR /repo

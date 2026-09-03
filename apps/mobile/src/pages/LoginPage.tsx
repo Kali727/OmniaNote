@@ -30,7 +30,7 @@ export default function LoginPage() {
   return (
     <div className="screen">
       <div className="screen__content">
-        <h1>Field Notes</h1>
+        <h1>OmniaNote</h1>
         <form className="form" onSubmit={onSubmit}>
           <input
             placeholder="Email or username"

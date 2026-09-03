@@ -1,11 +1,11 @@
-# Field Notes
+# OmniaNote
 
 A capture-first notes app for maintenance and facilities crews. Monorepo: a NestJS/Postgres API,
 a Capacitor + React mobile shell (iOS/Android via one codebase), and a shared types package so
 validation rules live in exactly one place.
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the pieces fit together and what's
-stubbed vs. real. Product research and rationale live in the Field Notes Blueprint (shared
+stubbed vs. real. Product research and rationale live in the OmniaNote Blueprint (shared
 separately, not checked into this repo).
 
 ## Layout
@@ -70,16 +70,16 @@ automatically on container start (see `apps/api/docker-entrypoint.sh`).
 ### Deploying to Proxmox as a dedicated LXC
 
 `infra/proxmox/` adapts the [community-scripts.org](https://community-scripts.org) Proxmox VE
-Helper-Scripts pattern to this app: `ct/fieldnotes.sh` runs on the Proxmox host and creates a new
+Helper-Scripts pattern to this app: `ct/omnianote.sh` runs on the Proxmox host and creates a new
 unprivileged Debian LXC (using the same `build.func` container-creation framework
-community-scripts uses); `install/fieldnotes-install.sh` runs inside that container, installs
+community-scripts uses); `install/omnianote-install.sh` runs inside that container, installs
 Docker, clones this repo, generates every secret in `infra/.env` automatically, and brings up the
 full stack.
 
 Run as root on the Proxmox host:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/ct/fieldnotes.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Kali727/OmniaNote/main/infra/proxmox/ct/omnianote.sh)"
 ```
 
 Re-running the same command against an existing container updates it (`git pull` +

@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { CreateItemInput, FileItemInput, isWithinStorageLimit, ItemType } from "@maintnote/shared";
+import { CreateItemInput, FileItemInput, isWithinStorageLimit, ItemType } from "@omnianote/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
 

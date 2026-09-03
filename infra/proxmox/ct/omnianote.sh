@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Field Notes — Proxmox VE LXC installer
+# OmniaNote — Proxmox VE LXC installer
 #
 # Run on the Proxmox host. This creates a new unprivileged Debian LXC and installs
-# the Field Notes Docker stack inside it. Adapted from the community-scripts.org
+# the OmniaNote Docker stack inside it. Adapted from the community-scripts.org
 # Proxmox VE Helper-Scripts pattern (https://github.com/community-scripts/ProxmoxVE) —
 # same build.func container-creation framework, our own install script.
 #
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/<you>/<repo>/main/infra/proxmox/ct/fieldnotes.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/<you>/<repo>/main/infra/proxmox/ct/omnianote.sh)"
 #
 source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
 
-APP="Field Notes"
+APP="OmniaNote"
 var_tags="${var_tags:-docker;maintenance}"
 var_cpu="${var_cpu:-4}"
 var_ram="${var_ram:-4096}"
@@ -29,13 +29,13 @@ function update_script() {
   check_container_storage
   check_container_resources
 
-  if [[ ! -d /opt/fieldnotes ]]; then
+  if [[ ! -d /opt/omnianote ]]; then
     msg_error "No ${APP} installation found!"
     exit
   fi
 
-  msg_info "Pulling latest Field Notes code and images"
-  cd /opt/fieldnotes
+  msg_info "Pulling latest OmniaNote code and images"
+  cd /opt/omnianote
   $STD git pull
   $STD docker compose -f infra/docker-compose.yml up -d --build --remove-orphans
   msg_ok "Updated ${APP}"

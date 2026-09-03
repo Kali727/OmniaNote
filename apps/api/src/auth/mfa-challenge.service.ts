@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { randomInt, randomUUID } from "crypto";
 import * as argon2 from "argon2";
-import { MfaMethod } from "@maintnote/shared";
+import { MfaMethod } from "@omnianote/shared";
 import { RedisService } from "../common/redis/redis.service";
 import { NotificationService } from "../notifications/notification.service";
 

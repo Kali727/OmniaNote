@@ -3,7 +3,7 @@ import { authenticator } from "otplib";
 import * as QRCode from "qrcode";
 import { EncryptionService } from "../common/crypto/encryption.service";
 
-const ISSUER = "Field Notes";
+const ISSUER = "OmniaNote";
 
 @Injectable()
 export class TotpService {

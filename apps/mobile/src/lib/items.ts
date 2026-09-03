@@ -1,4 +1,4 @@
-import type { CreateItemInput, FileItemInput } from "@maintnote/shared";
+import type { CreateItemInput, FileItemInput } from "@omnianote/shared";
 import { apiFetch, uploadToPresignedUrl } from "./apiClient";
 
 export interface Item {

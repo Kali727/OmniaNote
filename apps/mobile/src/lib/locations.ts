@@ -1,4 +1,4 @@
-import type { CreateFolderInput, CreateLocationInput } from "@maintnote/shared";
+import type { CreateFolderInput, CreateLocationInput } from "@omnianote/shared";
 import { apiFetch } from "./apiClient";
 
 export interface Location {

@@ -1,5 +1,5 @@
 import { createZodDto } from "nestjs-zod";
-import { createFolderSchema, createLocationSchema, createSpotSchema } from "@maintnote/shared";
+import { createFolderSchema, createLocationSchema, createSpotSchema } from "@omnianote/shared";
 
 export class CreateLocationDto extends createZodDto(createLocationSchema) {}
 export class CreateFolderDto extends createZodDto(createFolderSchema) {}

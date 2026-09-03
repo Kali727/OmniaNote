@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as argon2 from "argon2";
 import { createHash, randomBytes, randomUUID } from "crypto";
-import { AccountRole, MfaMethod, RegisterInput } from "@maintnote/shared";
+import { AccountRole, MfaMethod, RegisterInput } from "@omnianote/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { EnvConfig } from "../config/env.validation";
 import { TotpService } from "./totp.service";

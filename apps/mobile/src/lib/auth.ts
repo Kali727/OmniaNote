@@ -1,4 +1,4 @@
-import type { LoginInput, MfaMethod, RegisterInput } from "@maintnote/shared";
+import type { LoginInput, MfaMethod, RegisterInput } from "@omnianote/shared";
 import { apiFetch } from "./apiClient";
 import { tokenStore } from "./tokenStore";
 

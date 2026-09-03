@@ -27,7 +27,7 @@ export default function HomePage() {
 
   return (
     <div className="screen">
-      <div className="topbar">Field Notes</div>
+      <div className="topbar">OmniaNote</div>
       <div className="screen__content">
         {inboxCount > 0 && (
           <p className="empty-state">

@@ -1,7 +1,7 @@
 # Local development: just the backing services. Run the API on the host with
 # `npm run dev:api` for hot reload — see apps/api/.env for the matching localhost ports.
 #   docker compose -f infra/docker-compose.dev.yml up -d
-name: maintnote-dev
+name: omnianote-dev
 
 services:
   postgres:
@@ -9,9 +9,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: maintnote
-      POSTGRES_PASSWORD: maintnote
-      POSTGRES_DB: maintnote
+      POSTGRES_USER: omnianote
+      POSTGRES_PASSWORD: omnianote
+      POSTGRES_DB: omnianote
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
 
@@ -27,8 +27,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: maintnote
-      MINIO_ROOT_PASSWORD: maintnote-dev-secret
+      MINIO_ROOT_USER: omnianote
+      MINIO_ROOT_PASSWORD: omnianote-dev-secret
     volumes:
       - minio_dev_data:/data
 
@@ -38,8 +38,8 @@ services:
       - minio
     entrypoint: >
       /bin/sh -c "
-      until mc alias set local http://minio:9000 maintnote maintnote-dev-secret; do sleep 1; done &&
-      mc mb --ignore-existing local/maintnote-media
+      until mc alias set local http://minio:9000 omnianote omnianote-dev-secret; do sleep 1; done &&
+      mc mb --ignore-existing local/omnianote-media
       "
 
   meilisearch:

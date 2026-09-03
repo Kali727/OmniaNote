@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { MfaMethod } from "@maintnote/shared";
+import { MfaMethod } from "@omnianote/shared";
 
 /**
  * Sends an out-of-band OTP code to the user. The dev/default implementation just logs

@@ -5,7 +5,7 @@ import {
   mfaEnrollTotpVerifySchema,
   refreshTokenSchema,
   registerSchema,
-} from "@maintnote/shared";
+} from "@omnianote/shared";
 
 // Thin class wrappers so Nest's pipes/Swagger can see a DTO type, while the zod schema
 // in packages/shared stays the single source of truth for validation rules — the same

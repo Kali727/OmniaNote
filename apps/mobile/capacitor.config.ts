@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.fieldnotes.app',
-  appName: 'Field Notes',
+  appId: 'com.omnianote.app',
+  appName: 'OmniaNote',
   webDir: 'dist'
 };
 
