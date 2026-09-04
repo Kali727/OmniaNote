@@ -11,10 +11,10 @@ an email into the invite form" and "that person is a real `User`."
 
 `Location → Folder (self-referencing, nestable) → Item` is the filing hierarchy. `Spot` is
 separate from `Folder`: it's a recurring place or piece of equipment ("AC Unit, Room 312") that an
-`Item` can be pinned to independently of which folder it's filed in — that's what will power the
-asset/location history timeline described in the product brief. Every `Item` also has nullable
-`locationId`/`folderId` — a freshly captured item lands with both null (the account's Inbox) until
-someone files it, which is the whole point of the capture-first flow.
+`Item` can be pinned to independently of which folder it's filed in — that's what powers the
+asset/location history timeline (see "Maintenance stamps and location/asset history" below). Every
+`Item` also has nullable `locationId`/`folderId` — a freshly captured item lands with both null
+(the account's Inbox) until someone files it, which is the whole point of the capture-first flow.
 
 `NoteAttachment` links a `NOTE`-type `Item` to `PHOTO`/`VIDEO`/`PDF` items as discrete attachments
 (Outlook-style), so the same media object can be attached to more than one note without duplicating
@@ -49,6 +49,104 @@ or proxies media. `POST /items/:id/uploaded` is called once the upload finishes;
 real byte size is known, so it's also where the account's tier storage limit is enforced (an
 over-limit upload is deleted from storage and the item row is rolled back, rather than silently
 letting an account exceed its plan).
+
+## Filing an item: folder/spot are three-way, not just optional
+
+`fileItemSchema` (`packages/shared/src/schemas/item.ts`) makes `folderId`/`spotId` both
+`.nullable().optional()`, not just `.optional()`. That's deliberate: a plain optional string can
+only distinguish "provided" from "not provided," but re-filing an item needs a third state —
+*omit* the key to leave that field exactly as it is (e.g. changing only the spot without disturbing
+which folder the item's in), or send an explicit `null` to clear it back to "none." Prisma's own
+`update()` already treats an `undefined` value in the data object as "field not provided" and a
+`null` value as "set it to null," so `ItemsService.file()` passes the parsed input straight through
+with no extra branching — the schema is where this distinction has to be made, since a naive
+`.optional()` there would silently make "clear it" impossible to express. `ItemDetailPage.tsx`'s
+folder/spot `<select>`s send `null` for their "— None —" option specifically because of this.
+
+## Search
+
+Meilisearch (`apps/api/src/search/search.service.ts`) is scoped per-account and re-indexed on every
+item mutation (create, file, favorite, stamp). A search result's IDs are always resolved back
+against Postgres before returning — Meilisearch is never trusted as a source of truth for item
+data, so a stale or missing index entry can only ever mean an item doesn't show up yet, never that
+stale data gets served.
+
+The one landmine worth knowing before touching this file: every mutating call on the Meilisearch
+client returns an `EnqueuedTaskPromise`. A plain `await` on it only confirms the task was *queued*
+— a task that later *fails* still resolves that promise normally rather than rejecting it. Every
+write in `search.service.ts` goes through a `runTask()` helper that calls `.waitTask()` and checks
+`task.status` explicitly; skipping that check is exactly how this went silently wrong the first
+time it was written — search returned empty results for everything, with nothing in the logs to
+suggest why, since every write appeared to succeed.
+
+## Media: thumbnails and annotation
+
+Thumbnails are generated client-side (`apps/mobile/src/lib/thumbnail.ts`, canvas + `toBlob`) rather
+than server-side — the API already never touches media bytes (see below), and a client-side
+downscale means no image-processing dependency or worker queue is needed just to put something in
+a grid tile. `POST /items` returns a second presigned URL for the thumbnail alongside the one for
+the original, generated eagerly regardless of whether the client actually has one to upload; an
+unused presigned URL costs nothing.
+
+Annotation (`apps/mobile/src/components/AnnotationCanvas.tsx`) draws directly onto a canvas sized
+to the photo's *natural* resolution (not the on-screen display size) and flattens the markup onto
+the original image before upload — there's no separate overlay layer stored or reconstructed later,
+what gets uploaded is the final, already-annotated image.
+
+## Maintenance stamps and location/asset history
+
+`Item.stamps` (`StampType[]`) is a plain array column, set wholesale via `PATCH /items/:id/stamps`
+— there's no per-stamp toggle endpoint, the client always sends the item's complete desired stamp
+list. `Spot` is what actually powers asset/location history: `GET /items/by-spot/:spotId`
+(`apps/mobile/src/pages/SpotPage.tsx`) returns every item ever pinned to that spot, newest first,
+independent of which folder any of them are filed in. Both `folderId` and `spotId` are validated
+against the target `locationId` when filing an item — a folder or spot from a different location in
+the same account is rejected, not silently accepted.
+
+## Voice-note dictation
+
+`apps/mobile/src/lib/dictation.ts` calls the browser's native Web Speech API directly rather than a
+Capacitor plugin. The obvious candidate, `@capacitor-community/speech-recognition`, ships a web
+implementation where every method just throws "unimplemented on web" — unusable under the
+browser-only testing this project runs before native shells exist. This will need swapping for that
+plugin's native start/stop/partialResults API once `cap add ios`/`android` lands: neither WebView
+exposes the Web Speech API this hook depends on, so the feature stops working the moment the app
+runs natively instead of in a browser tab.
+
+## Offline outbox and background sync
+
+Captures write to a local IndexedDB queue (`apps/mobile/src/lib/outboxDb.ts`) before anything
+touches the network — `syncQueue.enqueue()` resolves once the write lands locally, and
+`CapturePage`/`NotePage` navigate away immediately rather than awaiting the upload. A background
+drain loop (`apps/mobile/src/lib/syncQueue.ts`) runs on enqueue, on the browser's `online` event, on
+a 25-second fallback timer (the `online` event only reflects the network interface, not real
+reachability), and once at startup to flush anything left over from a session that ended offline.
+Status per item — Queued/Uploading/Synced/Failed — is visible on Home and in the Inbox
+(`components/OutboxRow.tsx`), with tap-to-retry on a failure.
+
+The drain loop and manual retry are both wrapped in a `navigator.locks` exclusive lock
+(`SYNC_LOCK_NAME`), not just an in-memory `processing` flag — that flag only guards re-entrancy
+*within one tab's JS realm*, and the outbox itself is shared browser-wide storage. Two tabs open to
+the same account (or a tab plus an installed PWA instance) would otherwise each run their own
+independent drain loop against it. This was a real, reproduced bug during development: a manual
+retry racing an automatic retry of the same failed entry both read status `FAILED`, both flipped it
+to `QUEUED`, and both synced it — the item was created on the server twice. The fix holds the lock
+for the *entire* read-check-sync attempt (`syncOne`), not just the initial status flip followed by a
+separate call to trigger the drain — releasing early and re-acquiring left exactly the gap the race
+needed. If you're extending this file, any new code path that reads an entry's status and then acts
+on it needs to happen inside one lock acquisition, not two.
+
+## Team accounts
+
+Registration always creates exactly one new `Account`; joining an *existing* one only happens
+through the invite flow (`apps/api/src/team/`). `TeamService.inviteTeammate` enforces
+`isWithinTeamMemberLimit` (`packages/shared/src/tiers.ts`) against members *and* live pending
+invites combined, so the limit can't be gamed by leaving invites outstanding. Accepting an invite
+(`POST /team/invites/:token/accept` — public, the invitee has no account yet) creates the `User` and
+logs them straight in via `AuthService.issueTokens`, the same token-issuing path login uses.
+Permission rules worth knowing if you touch this: only OWNER/ADMIN can invite or remove a member,
+only OWNER can change a role or remove an ADMIN, and an account can never be left with zero OWNERs
+(`assertNotLastOwner`) — enforced both on removal and on demoting the last owner's own role.
 
 ## MFA
 
