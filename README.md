@@ -38,22 +38,25 @@ run inside the container.
       Account (one subscription per Account, no per-seat charge — teammates share its tier).
       OWNER/ADMIN/MEMBER roles, per-tier member caps, a Team screen off Settings, public
       invite-preview/accept screens. Accounts got a real `name` field along the way.
+- [x] Admin panel at `/admin` — uptime/health (DB, Redis, Meilisearch, storage), a recent-errors
+      feed (every 5xx logged with full stack trace, not just 4xx noise), usage (accounts by tier,
+      online-now/active-24h/7d/new-30d, storage, items), and geography via Cloudflare's
+      `CF-IPCountry` header. Static page served by the API itself, not part of the mobile app;
+      gated by a new `isPlatformAdmin` flag with no self-service way to grant it (direct SQL only —
+      see `docs/ARCHITECTURE.md`).
 
-This closes out every item that was on the "majors first" list — everything below is either
-deferred by explicit decision or genuinely open-ended (the admin panel), which is next up.
+This closes out every item that was on the "majors first" list, plus the admin panel — everything
+left is deferred by explicit decision, or open-ended follow-up work noticed along the way.
 
 **Deferred — explicit decisions, revisit later**
 - [ ] Live MFA email delivery — the Resend integration is done; `RESEND_API_KEY` just isn't set on
       the production deployment yet, so codes still log to `docker compose logs api` there
 - [ ] Billing — RevenueCat or an alternative (Qonversion/Adapty/AppHud/Glassfy) vs. rolling it
       yourself against Apple/Google directly; Apple + Google dev accounts already exist, deferred
-      until the product's further along
+      until the product's further along. The admin panel's subscription-status breakdown will read
+      empty until this exists — the `Subscription` table has nothing populating it yet.
 - [ ] Native iOS/Android builds (`cap add ios`/`android`) — have Mac+Xcode and Android Studio ready,
       staying on web-based testing until the backend/frontend feature list above is further along
-
-**Up next**
-- [ ] Admin panel — uptime/error monitoring, logs, usage analytics (active users, geography, paying
-      subscriptions)
 
 ## Layout
 
