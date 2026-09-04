@@ -34,25 +34,26 @@ run inside the container.
       first and sync in the background, so nothing is lost to a dropped connection or a closed tab;
       status (Queued/Uploading/Synced/Failed) shows on Home and in the Inbox, with tap-to-retry on
       a failure (see `lib/syncQueue.ts`)
+- [x] Team accounts — invite a teammate by email, they accept and are auto-logged into the shared
+      Account (one subscription per Account, no per-seat charge — teammates share its tier).
+      OWNER/ADMIN/MEMBER roles, per-tier member caps, a Team screen off Settings, public
+      invite-preview/accept screens. Accounts got a real `name` field along the way.
 
 This closes out every item that was on the "majors first" list — everything below is either
-deferred by explicit decision or genuinely open-ended (the admin panel). Next up is picking through
-smaller polish and gaps noticed along the way (e.g. no folder-creation UI yet, no way to clear a
-previously-set spot back to "none").
+deferred by explicit decision or genuinely open-ended (the admin panel), which is next up.
 
 **Deferred — explicit decisions, revisit later**
 - [ ] Live MFA email delivery — the Resend integration is done; `RESEND_API_KEY` just isn't set on
       the production deployment yet, so codes still log to `docker compose logs api` there
-- [ ] Team/invite-a-teammate flow — staying solo-account for now. Decided when we do build it: one
-      subscription per Account (already how the schema works), no per-seat charge, teammates just
-      share the account's tier
 - [ ] Billing — RevenueCat or an alternative (Qonversion/Adapty/AppHud/Glassfy) vs. rolling it
       yourself against Apple/Google directly; Apple + Google dev accounts already exist, deferred
       until the product's further along
 - [ ] Native iOS/Android builds (`cap add ios`/`android`) — have Mac+Xcode and Android Studio ready,
       staying on web-based testing until the backend/frontend feature list above is further along
+
+**Up next**
 - [ ] Admin panel — uptime/error monitoring, logs, usage analytics (active users, geography, paying
-      subscriptions) all land here once it exists; no timeline yet
+      subscriptions)
 
 ## Layout
 
