@@ -1,4 +1,4 @@
-import type { CreateItemInput, FileItemInput } from "@omnianote/shared";
+import type { CreateItemInput, FileItemInput, StampType } from "@omnianote/shared";
 import { apiFetch, uploadToPresignedUrl } from "./apiClient";
 import { createThumbnail } from "./thumbnail";
 
@@ -11,9 +11,11 @@ export interface Item {
   folderId: string | null;
   spotId: string | null;
   isFavorite: boolean;
+  stamps: StampType[];
   clientCreatedAt: string;
   thumbnailUrl?: string | null;
 }
+
 
 export const itemsApi = {
   listInbox: () => apiFetch<Item[]>("/items/inbox"),
@@ -35,6 +37,18 @@ export const itemsApi = {
     apiFetch<Item>(`/items/${itemId}/file`, { method: "PATCH", body: JSON.stringify(input) }),
 
   toggleFavorite: (itemId: string) => apiFetch<Item>(`/items/${itemId}/favorite`, { method: "PATCH" }),
+
+  setStamps: (itemId: string, stamps: StampType[]) =>
+    apiFetch<Item>(`/items/${itemId}/stamps`, { method: "PATCH", body: JSON.stringify({ stamps }) }),
+
+  async get(itemId: string): Promise<Item & { downloadUrl: string | null }> {
+    const { item, downloadUrl, thumbnailUrl } = await apiFetch<{
+      item: Omit<Item, "thumbnailUrl">;
+      downloadUrl: string | null;
+      thumbnailUrl: string | null;
+    }>(`/items/${itemId}`);
+    return { ...item, thumbnailUrl, downloadUrl };
+  },
 
   /** Full capture-to-inbox flow for a photo/video/pdf: create the metadata row, then push
    *  the original bytes and (for photos) a client-generated thumbnail. A thumbnail failure

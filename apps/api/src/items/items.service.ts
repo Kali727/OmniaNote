@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { CreateItemInput, FileItemInput, isWithinStorageLimit, ItemType } from "@omnianote/shared";
+import { CreateItemInput, FileItemInput, isWithinStorageLimit, ItemType, SetStampsInput } from "@omnianote/shared";
 import { Item } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
@@ -140,6 +140,16 @@ export class ItemsService {
     const updated = await this.prisma.item.update({
       where: { id: itemId },
       data: { locationId: input.locationId, folderId: input.folderId, spotId: input.spotId },
+    });
+    await this.searchService.indexItem(updated);
+    return updated;
+  }
+
+  async setStamps(accountId: string, itemId: string, input: SetStampsInput) {
+    await this.getOwnedItem(accountId, itemId);
+    const updated = await this.prisma.item.update({
+      where: { id: itemId },
+      data: { stamps: input.stamps },
     });
     await this.searchService.indexItem(updated);
     return updated;

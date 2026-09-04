@@ -11,6 +11,7 @@ import InboxPage from "./pages/InboxPage";
 import MfaChallengePage from "./pages/MfaChallengePage";
 import SettingsPage from "./pages/SettingsPage";
 import SearchPage from "./pages/SearchPage";
+import ItemDetailPage from "./pages/ItemDetailPage";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"checking" | "in" | "out">("checking");
@@ -68,6 +69,14 @@ export default function App() {
           element={
             <AuthGate>
               <SearchPage />
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/items/:itemId"
+          element={
+            <AuthGate>
+              <ItemDetailPage />
             </AuthGate>
           }
         />

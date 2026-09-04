@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ItemsService } from "./items.service";
-import { AttachToNoteDto, ConfirmUploadDto, CreateItemDto, FileItemDto } from "./dto/items.dto";
+import { AttachToNoteDto, ConfirmUploadDto, CreateItemDto, FileItemDto, SetStampsDto } from "./dto/items.dto";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtPayload } from "../auth/strategies/jwt.strategy";
@@ -71,6 +71,11 @@ export class ItemsController {
   @Patch(":id/favorite")
   toggleFavorite(@CurrentUser() user: JwtPayload, @Param("id", ParseUUIDPipe) id: string) {
     return this.items.toggleFavorite(user.accountId, id);
+  }
+
+  @Patch(":id/stamps")
+  setStamps(@CurrentUser() user: JwtPayload, @Param("id", ParseUUIDPipe) id: string, @Body() body: SetStampsDto) {
+    return this.items.setStamps(user.accountId, id, body);
   }
 
   @Post("attach")

@@ -25,6 +25,11 @@ export const fileItemSchema = z.object({
 });
 export type FileItemInput = z.infer<typeof fileItemSchema>;
 
+export const setStampsSchema = z.object({
+  stamps: z.array(z.nativeEnum(StampType)).max(8),
+});
+export type SetStampsInput = z.infer<typeof setStampsSchema>;
+
 export const attachToNoteSchema = z.object({
   noteItemId: z.string().uuid(),
   attachmentItemId: z.string().uuid(),

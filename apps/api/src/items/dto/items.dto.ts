@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { createZodDto } from "nestjs-zod";
-import { attachToNoteSchema, createItemSchema, fileItemSchema } from "@omnianote/shared";
+import { attachToNoteSchema, createItemSchema, fileItemSchema, setStampsSchema } from "@omnianote/shared";
 
 export class CreateItemDto extends createZodDto(createItemSchema) {}
 export class FileItemDto extends createZodDto(fileItemSchema) {}
+export class SetStampsDto extends createZodDto(setStampsSchema) {}
 export class AttachToNoteDto extends createZodDto(attachToNoteSchema) {}
 
 export const confirmUploadSchema = z.object({
