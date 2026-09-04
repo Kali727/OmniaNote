@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { itemsApi, type Item } from "../lib/items";
-import { locationsApi, type Spot } from "../lib/locations";
+import { locationsApi, type Folder, type Spot } from "../lib/locations";
 import { STAMP_META, STAMP_ORDER } from "../lib/stamps";
 import type { StampType } from "@omnianote/shared";
 
@@ -20,6 +20,8 @@ export default function ItemDetailPage() {
   const [savingStamps, setSavingStamps] = useState(false);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [savingSpot, setSavingSpot] = useState(false);
+  const [folders, setFolders] = useState<Folder[]>([]);
+  const [savingFolder, setSavingFolder] = useState(false);
 
   useEffect(() => {
     if (!itemId) return;
@@ -29,27 +31,43 @@ export default function ItemDetailPage() {
   useEffect(() => {
     if (!item?.locationId) {
       setSpots([]);
+      setFolders([]);
       return;
     }
     locationsApi.listSpots(item.locationId).then(setSpots);
+    locationsApi.listFolders(item.locationId).then(setFolders);
   }, [item?.locationId]);
 
+  // spotId/folderId: "" means "— None —" in the <select>, which must send an explicit
+  // `null` to actually clear the assignment — omitting the key from the request instead
+  // means "leave it as it is" (see fileItemSchema), which would silently do nothing.
   async function assignSpot(spotId: string) {
     if (!item || !item.locationId || savingSpot) return;
     const previous = item.spotId;
     setItem({ ...item, spotId: spotId || null });
     setSavingSpot(true);
     try {
-      await itemsApi.file(item.id, {
-        locationId: item.locationId,
-        folderId: item.folderId ?? undefined,
-        spotId: spotId || undefined,
-      });
+      await itemsApi.file(item.id, { locationId: item.locationId, spotId: spotId || null });
     } catch {
       setItem((current) => (current ? { ...current, spotId: previous } : current));
       setError("Couldn't update the spot — try again.");
     } finally {
       setSavingSpot(false);
+    }
+  }
+
+  async function assignFolder(folderId: string) {
+    if (!item || !item.locationId || savingFolder) return;
+    const previous = item.folderId;
+    setItem({ ...item, folderId: folderId || null });
+    setSavingFolder(true);
+    try {
+      await itemsApi.file(item.id, { locationId: item.locationId, folderId: folderId || null });
+    } catch {
+      setItem((current) => (current ? { ...current, folderId: previous } : current));
+      setError("Couldn't update the folder — try again.");
+    } finally {
+      setSavingFolder(false);
     }
   }
 
@@ -111,6 +129,22 @@ export default function ItemDetailPage() {
                 );
               })}
             </div>
+
+            <div className="section-title">Folder</div>
+            {!item.locationId ? (
+              <p className="empty-state">File this item to a location from the Inbox to move it into a folder.</p>
+            ) : folders.length === 0 ? (
+              <p className="empty-state">No folders at this location yet — add one from the location screen.</p>
+            ) : (
+              <select value={item.folderId ?? ""} disabled={savingFolder} onChange={(e) => assignFolder(e.target.value)}>
+                <option value="">— No folder (loose at location) —</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
             <div className="section-title">Spot</div>
             {!item.locationId ? (

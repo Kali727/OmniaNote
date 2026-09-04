@@ -20,8 +20,12 @@ export type CreateItemInput = z.infer<typeof createItemSchema>;
 
 export const fileItemSchema = z.object({
   locationId: z.string().uuid(),
-  folderId: z.string().uuid().optional(), // omit to leave loose at the location root
-  spotId: z.string().uuid().optional(),
+  // Three-way on purpose: omit the key to leave it untouched (e.g. changing the spot
+  // without disturbing which folder the item's in), or send an explicit `null` to clear
+  // it back to "none" — a plain `.optional()` string can't distinguish "don't touch"
+  // from "clear", since both would otherwise just mean "not provided."
+  folderId: z.string().uuid().nullable().optional(),
+  spotId: z.string().uuid().nullable().optional(),
 });
 export type FileItemInput = z.infer<typeof fileItemSchema>;
 

@@ -15,6 +15,7 @@ import ItemDetailPage from "./pages/ItemDetailPage";
 import SpotPage from "./pages/SpotPage";
 import TeamPage from "./pages/TeamPage";
 import InviteAcceptPage from "./pages/InviteAcceptPage";
+import FolderPage from "./pages/FolderPage";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"checking" | "in" | "out">("checking");
@@ -113,6 +114,14 @@ export default function App() {
           element={
             <AuthGate>
               <LocationPage />
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/locations/:locationId/folders/:folderId"
+          element={
+            <AuthGate>
+              <FolderPage />
             </AuthGate>
           }
         />

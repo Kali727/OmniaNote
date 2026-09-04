@@ -130,12 +130,31 @@ export class ItemsService {
     );
   }
 
-  /** Files (or re-files) an item from the Inbox into a location/folder/spot. */
+  /**
+   * Files (or re-files) an item from the Inbox into a location/folder/spot. folderId and
+   * spotId are three-way: omit the key to leave it as-is, send `null` to clear it back to
+   * "none", or send an id to set it — see fileItemSchema for why a plain optional string
+   * can't express that. Prisma's own update() already treats an `undefined` value in the
+   * data object as "field not provided" and a `null` value as "set it to null", so passing
+   * these straight through does the right thing without any extra branching here.
+   */
   async file(accountId: string, itemId: string, input: FileItemInput) {
     await this.getOwnedItem(accountId, itemId);
     const location = await this.prisma.location.findUnique({ where: { id: input.locationId } });
     if (!location || location.accountId !== accountId) {
       throw new ForbiddenException("Location does not belong to this account");
+    }
+    if (input.folderId) {
+      const folder = await this.prisma.folder.findUnique({ where: { id: input.folderId } });
+      if (!folder || folder.locationId !== input.locationId) {
+        throw new ForbiddenException("Folder does not belong to this location");
+      }
+    }
+    if (input.spotId) {
+      const spot = await this.prisma.spot.findUnique({ where: { id: input.spotId } });
+      if (!spot || spot.locationId !== input.locationId) {
+        throw new ForbiddenException("Spot does not belong to this location");
+      }
     }
     const updated = await this.prisma.item.update({
       where: { id: itemId },

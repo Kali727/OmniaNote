@@ -14,6 +14,9 @@ export default function LocationPage() {
   const [newSpotName, setNewSpotName] = useState("");
   const [addingSpot, setAddingSpot] = useState(false);
   const [spotError, setSpotError] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [addingFolder, setAddingFolder] = useState(false);
+  const [folderError, setFolderError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!locationId) return;
@@ -37,6 +40,23 @@ export default function LocationPage() {
       setSpotError(err instanceof Error ? err.message : "Couldn't add that spot.");
     } finally {
       setAddingSpot(false);
+    }
+  }
+
+  async function addFolder(e: FormEvent) {
+    e.preventDefault();
+    const name = newFolderName.trim();
+    if (!name || !locationId) return;
+    setAddingFolder(true);
+    setFolderError(null);
+    try {
+      const folder = await locationsApi.createFolder({ locationId, name });
+      setFolders((prev) => [...prev, folder].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewFolderName("");
+    } catch (err) {
+      setFolderError(err instanceof Error ? err.message : "Couldn't add that folder.");
+    } finally {
+      setAddingFolder(false);
     }
   }
 
@@ -75,17 +95,35 @@ export default function LocationPage() {
         {spotError && <p className="error">{spotError}</p>}
 
         <div className="section-title">Folders</div>
-        {folders.length === 0 ? (
-          <p className="empty-state">No folders yet.</p>
-        ) : (
-          <div className="item-grid">
+        <p className="empty-state" style={{ marginTop: "-0.4rem" }}>
+          Organize items into folders and subfolders — tap one to open it.
+        </p>
+        {folders.length > 0 && (
+          <div className="item-grid" style={{ marginBottom: "0.75rem" }}>
             {folders.map((folder) => (
-              <div key={folder.id} className="item-tile">
+              <div
+                key={folder.id}
+                className="item-tile"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.85rem", padding: "0.5rem", textAlign: "center" }}
+                onClick={() => navigate(`/locations/${locationId}/folders/${folder.id}`)}
+              >
                 📁 {folder.name}
               </div>
             ))}
           </div>
         )}
+        <form onSubmit={addFolder} style={{ display: "flex", gap: "0.5rem" }}>
+          <input
+            placeholder="e.g. Housekeeping Supplies"
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            style={{ flex: 1 }}
+          />
+          <button type="submit" disabled={addingFolder || !newFolderName.trim()}>
+            Add
+          </button>
+        </form>
+        {folderError && <p className="error">{folderError}</p>}
 
         <div className="section-title">Loose items</div>
         {items.length === 0 ? (
