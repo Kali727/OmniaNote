@@ -28,9 +28,10 @@ run inside the container.
       first item detail screen, since nothing let you open a single item before this
 - [x] Location/asset history UI — spots (recurring assets, e.g. "AC Unit, Room 312") get their own
       history timeline; also added the location-creation UI that was missing entirely before this
+- [x] Voice-note dictation — live speech-to-text on the note body via the browser's Web Speech API;
+      needs swapping for a native plugin once iOS/Android shells exist (see `lib/dictation.ts`)
 
 **Next up** (working through these in order — majors first, polish later)
-- [ ] Voice-note dictation
 - [ ] Visible sync-status UI for offline capture (Queued/Uploading/Synced/Failed)
 
 **Deferred — explicit decisions, revisit later**
