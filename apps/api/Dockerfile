@@ -37,6 +37,7 @@ COPY --from=builder /repo/packages/shared/dist packages/shared/dist
 COPY --from=builder /repo/apps/api/package.json apps/api/package.json
 COPY --from=builder /repo/apps/api/dist apps/api/dist
 COPY --from=builder /repo/apps/api/prisma apps/api/prisma
+COPY --from=builder /repo/apps/api/public apps/api/public
 COPY apps/api/docker-entrypoint.sh docker-entrypoint.sh
 RUN chmod +x docker-entrypoint.sh
 

@@ -83,6 +83,20 @@ model User {
   mobileNumber String
   role         AccountRole @default(OWNER)
 
+  // Platform-wide admin panel access — unrelated to AccountRole, which only ever scopes
+  // permissions within one Account. No self-service way to set this; grant it with a
+  // direct SQL UPDATE (see docs/ARCHITECTURE.md) the same way you'd grant any other
+  // break-glass access to a system with no operator UI yet.
+  isPlatformAdmin  Boolean    @default(false)
+  // Updated on every authenticated request (see ActivityInterceptor) — powers "online
+  // now" / active-user counts in the admin panel. Null means never made an API call.
+  lastSeenAt       DateTime?
+  // ISO 3166-1 alpha-2, read from Cloudflare's CF-IPCountry header when present — null
+  // for any request not routed through Cloudflare (e.g. local dev). No GeoIP database or
+  // third-party lookup service; this is free and already accurate for the one real
+  // deployment, at the cost of being unavailable anywhere else.
+  lastKnownCountry String?
+
   mfaEnabled       Boolean    @default(false)
   mfaPreferred     MfaMethod?
   mfaTotpSecret    String? // encrypted at rest by the app layer, never returned via API
@@ -256,6 +270,24 @@ model NoteAttachment {
   attachmentItem   Item   @relation("AttachmentToNote", fields: [attachmentItemId], references: [id], onDelete: Cascade)
 
   @@id([noteItemId, attachmentItemId])
+}
+
+// Populated by the global exception filter for every 5xx response — the admin panel's
+// error feed. Deliberately not a foreign key to User/Account: an error can happen on an
+// unauthenticated request (both null), and this must never fail to log — or worse, block
+// deleting a user — just because a constraint doesn't like the referenced row.
+model ErrorLog {
+  id         String   @id @default(uuid())
+  message    String
+  stack      String?
+  path       String
+  method     String
+  statusCode Int
+  userId     String?
+  accountId  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 // Tracks tier entitlement over time. The current row per account (by updatedAt)

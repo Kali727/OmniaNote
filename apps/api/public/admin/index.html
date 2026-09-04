@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OmniaNote Admin</title>
+<style>
+  :root {
+    --bg: #14181a;
+    --surface: #1c2225;
+    --surface-2: #222a2d;
+    --ink: #e8ece9;
+    --ink-soft: #aab4ae;
+    --accent: #e3a552;
+    --line: #2c3437;
+    --danger: #d9694f;
+    --good: #5cb87a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  #app { max-width: 1000px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  h1 { font-size: 1.3rem; margin: 0 0 1.25rem; }
+  h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); margin: 2rem 0 0.75rem; }
+  a { color: var(--accent); }
+  input, button, select {
+    font-family: inherit; font-size: 0.95rem;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px; padding: 0.6rem 0.8rem;
+  }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); color: #2a1d0c; border: none; font-weight: 700; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .error { color: var(--danger); font-size: 0.88rem; }
+  .empty { color: var(--ink-soft); font-size: 0.9rem; }
+
+  #login-screen { max-width: 340px; margin: 4rem auto; }
+  #login-screen form { display: flex; flex-direction: column; gap: 0.7rem; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.9rem 1rem; }
+  .stat-card .value { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-card .label { font-size: 0.78rem; color: var(--ink-soft); margin-top: 0.2rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--line); }
+  th { color: var(--ink-soft); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; }
+  .table-wrap { overflow-x: auto; }
+
+  .badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.82rem; font-weight: 600; }
+  .badge.ok { background: color-mix(in srgb, var(--good) 18%, var(--surface)); color: var(--good); }
+  .badge.bad { background: color-mix(in srgb, var(--danger) 18%, var(--surface)); color: var(--danger); }
+  .health-grid { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+  .toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+  .pager { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+
+  pre.stack { white-space: pre-wrap; word-break: break-word; font-size: 0.78rem; color: var(--ink-soft); margin: 0.4rem 0 0; }
+  details summary { cursor: pointer; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+  .topbar button { background: none; border: none; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="admin.js"></script>
+</body>
+</html>

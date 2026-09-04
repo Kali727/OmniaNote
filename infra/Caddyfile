@@ -2,6 +2,10 @@
 	# Caddy issues/renews the TLS cert automatically once DOMAIN is a real hostname
 	# pointing at this server — nothing else to configure for HTTPS.
 	reverse_proxy /api/* api:3000
+	# The admin dashboard — a static page the API serves outside its /api/v1 prefix
+	# (see apps/api/src/main.ts). Not part of the mobile app; reachable only to whoever
+	# knows to visit it, and gated behind login + isPlatformAdmin from there.
+	reverse_proxy /admin* api:3000
 }
 
 # Catch-all for anything that doesn't match the block above — chiefly, browsing straight
@@ -19,4 +23,8 @@
 		on_demand
 	}
 	reverse_proxy /api/* api:3000
+	# The admin dashboard — a static page the API serves outside its /api/v1 prefix
+	# (see apps/api/src/main.ts). Not part of the mobile app; reachable only to whoever
+	# knows to visit it, and gated behind login + isPlatformAdmin from there.
+	reverse_proxy /admin* api:3000
 }

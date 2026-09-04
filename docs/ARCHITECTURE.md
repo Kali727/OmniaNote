@@ -2,9 +2,12 @@
 
 ## Data model
 
-`Account` is the billing/storage unit (one per signup). `User` belongs to exactly one `Account`
-today — `AccountRole` exists on the model so a future "invite a teammate" feature is a permissions
-change, not a schema migration.
+`Account` is the billing/storage unit (one per signup, optionally named — e.g. "Grand Plaza Hotel").
+`User` belongs to exactly one `Account`; more than one `User` can share an `Account` via the team
+invite flow (`apps/api/src/team/`), with `AccountRole` (OWNER/ADMIN/MEMBER) scoping what each can
+do — one subscription per Account, no per-seat charge, so a teammate just shares the account's
+tier. `Invite` is the pending-invitation row (single-use token, 7-day expiry) between "someone typed
+an email into the invite form" and "that person is a real `User`."
 
 `Location → Folder (self-referencing, nestable) → Item` is the filing hierarchy. `Spot` is
 separate from `Folder`: it's a recurring place or piece of equipment ("AC Unit, Room 312") that an
@@ -58,12 +61,38 @@ endpoints per method) both use short-TTL Redis keys rather than a database table
 code is inherently ephemeral. Enrollment is reachable from the mobile app's Settings screen
 (`apps/mobile/src/pages/SettingsPage.tsx`), not just the API.
 
+## Admin panel
+
+A static page at `/admin` (`apps/api/public/admin/`), served by the API itself outside its
+`/api/v1` prefix via Express's static-assets handling in `main.ts` — deliberately not part of the
+Capacitor mobile bundle, since this is for whoever operates the service, not any logged-in end
+user. It's plain HTML/CSS/vanilla JS (no build step, no framework) calling the same JSON endpoints
+(`/api/v1/admin/*`) a real client would, gated by `JwtAuthGuard` + `PlatformAdminGuard`.
+
+`PlatformAdminGuard` checks `User.isPlatformAdmin` — unrelated to `AccountRole`, which only ever
+scopes permissions *within* one Account. There's no self-service way to become a platform admin;
+grant it directly:
+
+```sql
+UPDATE "User" SET "isPlatformAdmin" = true WHERE username = 'you';
+```
+
+The panel covers uptime/health (DB, Redis, Meilisearch, storage reachability —
+`AdminService.getHealth`), a recent-errors feed (every 5xx response is recorded to `ErrorLog` by a
+global exception filter, `common/filters/error-logging.filter.ts`; 4xx responses aren't logged,
+they're expected traffic), and usage: accounts by tier, online-now / active-24h / active-7d /
+new-in-30d user counts (from `User.lastSeenAt`, stamped on every authenticated request by
+`common/interceptors/activity.interceptor.ts`), storage used, and a country breakdown. Geography
+comes from Cloudflare's `CF-IPCountry` request header — free, and already accurate for the one real
+deployment (which sits behind Cloudflare Tunnel) — rather than a GeoIP database or third-party
+lookup service; it's simply absent for any request not routed through Cloudflare (local dev, for
+instance).
+
 ## What's scaffolded but not yet wired up
 
 These are provisioned in `infra/docker-compose.yml` because the product plan calls for them, but
 no application code uses them yet:
 
-- **Meilisearch** — container runs; no indexing pipeline or search endpoint exists yet.
 - **Redis + BullMQ** — Redis is wired up and used for MFA challenges; no background job queue
   (thumbnailing, video transcode, OCR) has been built yet. `@nestjs/bullmq` and `bullmq` are
   already dependencies of the API.
@@ -83,5 +112,9 @@ natural fit given the deploy already sits behind Cloudflare Tunnel). Local-only 
 ## What's implemented end-to-end
 
 Register/login with TOTP or email MFA enrollment and verification, JWT access + rotating refresh
-tokens, locations/folders/spots with tier-limit enforcement, the full item capture flow (create →
-presigned upload → confirm → file from Inbox → favorite → attach to a note), and automated backups.
+tokens, team accounts (invite/accept/roles), locations/folders/spots with tier-limit enforcement
+and per-spot history, the full item capture flow (create → presigned upload → confirm → file from
+Inbox → favorite → attach to a note) with an offline outbox so a capture is never lost to a dropped
+connection, photo thumbnails/annotation, the maintenance stamp library, voice-note dictation,
+Meilisearch-backed search, automated backups, and the admin panel described above. See the
+README's Status & TODO for what's still deferred.

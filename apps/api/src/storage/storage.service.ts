@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -55,5 +56,15 @@ export class StorageService {
 
   async deleteObject(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  }
+
+  /** For the admin health check — confirms the bucket is actually reachable, not just configured. */
+  async checkConnection(): Promise<boolean> {
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
