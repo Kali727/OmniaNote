@@ -44,9 +44,14 @@ run inside the container.
       `CF-IPCountry` header. Static page served by the API itself, not part of the mobile app;
       gated by a new `isPlatformAdmin` flag with no self-service way to grant it (direct SQL only —
       see `docs/ARCHITECTURE.md`).
+- [x] Folder creation/browsing, and clearing a folder or spot back to "none" — the two minor gaps
+      noticed earlier. Folders are now creatable and nestable from the Location screen, browsable
+      via a new folder screen, and an item can be moved into/out of one from its detail screen just
+      like a spot. `docs/ARCHITECTURE.md` also got a full pass documenting everything built this
+      cycle, since it had drifted well behind the actual feature set.
 
-This closes out every item that was on the "majors first" list, plus the admin panel — everything
-left is deferred by explicit decision, or open-ended follow-up work noticed along the way.
+This closes out every item that was on the "majors first" list, the admin panel, and both minor
+gaps noticed along the way — everything left is deferred by explicit decision.
 
 **Deferred — explicit decisions, revisit later**
 - [ ] Live MFA email delivery — the Resend integration is done; `RESEND_API_KEY` just isn't set on
