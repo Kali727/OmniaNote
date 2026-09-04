@@ -12,6 +12,7 @@ import MfaChallengePage from "./pages/MfaChallengePage";
 import SettingsPage from "./pages/SettingsPage";
 import SearchPage from "./pages/SearchPage";
 import ItemDetailPage from "./pages/ItemDetailPage";
+import SpotPage from "./pages/SpotPage";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"checking" | "in" | "out">("checking");
@@ -77,6 +78,14 @@ export default function App() {
           element={
             <AuthGate>
               <ItemDetailPage />
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/spots/:spotId"
+          element={
+            <AuthGate>
+              <SpotPage />
             </AuthGate>
           }
         />

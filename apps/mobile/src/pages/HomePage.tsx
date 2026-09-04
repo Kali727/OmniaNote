@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { itemsApi, type Item } from "../lib/items";
 import { locationsApi, type Location } from "../lib/locations";
@@ -10,6 +10,9 @@ export default function HomePage() {
   const [favorites, setFavorites] = useState<Item[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [inboxCount, setInboxCount] = useState(0);
+  const [newLocationName, setNewLocationName] = useState("");
+  const [addingLocation, setAddingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
     itemsApi.listRecent().then(setRecent).catch(() => {});
@@ -17,6 +20,23 @@ export default function HomePage() {
     itemsApi.listInbox().then((inbox) => setInboxCount(inbox.length)).catch(() => {});
     locationsApi.list().then(setLocations).catch(() => {});
   }, []);
+
+  async function addLocation(e: FormEvent) {
+    e.preventDefault();
+    const name = newLocationName.trim();
+    if (!name) return;
+    setAddingLocation(true);
+    setLocationError(null);
+    try {
+      const location = await locationsApi.create({ name });
+      setLocations((prev) => [...prev, location]);
+      setNewLocationName("");
+    } catch (err) {
+      setLocationError(err instanceof Error ? err.message : "Couldn't add that location.");
+    } finally {
+      setAddingLocation(false);
+    }
+  }
 
   return (
     <div className="screen">
@@ -39,18 +59,28 @@ export default function HomePage() {
           </p>
         )}
 
-        {locations.length > 1 && (
-          <>
-            <div className="section-title">Locations</div>
-            <div className="location-list">
-              {locations.map((loc) => (
-                <div key={loc.id} className="location-row" onClick={() => navigate(`/locations/${loc.id}`)}>
-                  {loc.name}
-                </div>
-              ))}
-            </div>
-          </>
+        <div className="section-title">Locations</div>
+        {locations.length > 0 && (
+          <div className="location-list" style={{ marginBottom: "0.75rem" }}>
+            {locations.map((loc) => (
+              <div key={loc.id} className="location-row" onClick={() => navigate(`/locations/${loc.id}`)}>
+                {loc.name}
+              </div>
+            ))}
+          </div>
         )}
+        <form onSubmit={addLocation} style={{ display: "flex", gap: "0.5rem" }}>
+          <input
+            placeholder="e.g. Main Building"
+            value={newLocationName}
+            onChange={(e) => setNewLocationName(e.target.value)}
+            style={{ flex: 1 }}
+          />
+          <button type="submit" disabled={addingLocation || !newLocationName.trim()}>
+            Add
+          </button>
+        </form>
+        {locationError && <p className="error">{locationError}</p>}
 
         <div className="section-title">Favorites</div>
         {favorites.length === 0 ? (

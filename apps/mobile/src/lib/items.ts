@@ -23,6 +23,7 @@ export const itemsApi = {
   listFavorites: () => apiFetch<Item[]>("/items/favorites"),
   listByFolder: (locationId: string, folderId?: string) =>
     apiFetch<Item[]>(`/items/by-folder?locationId=${locationId}${folderId ? `&folderId=${folderId}` : ""}`),
+  listBySpot: (spotId: string) => apiFetch<Item[]>(`/items/by-spot/${spotId}`),
 
   create: (input: CreateItemInput) =>
     apiFetch<{ item: Item; uploadUrl: string | null; thumbnailUploadUrl: string | null }>("/items", {

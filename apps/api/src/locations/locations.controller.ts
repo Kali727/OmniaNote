@@ -39,4 +39,9 @@ export class LocationsController {
   createSpot(@CurrentUser() user: JwtPayload, @Body() body: CreateSpotDto) {
     return this.locations.createSpot(user.accountId, body);
   }
+
+  @Get("spots/:id")
+  getSpot(@CurrentUser() user: JwtPayload, @Param("id", ParseUUIDPipe) id: string) {
+    return this.locations.getSpot(user.accountId, id);
+  }
 }

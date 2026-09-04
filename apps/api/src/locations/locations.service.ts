@@ -44,6 +44,13 @@ export class LocationsService {
     return this.prisma.spot.create({ data: { locationId: input.locationId, name: input.name } });
   }
 
+  async getSpot(accountId: string, spotId: string) {
+    const spot = await this.prisma.spot.findUnique({ where: { id: spotId } });
+    if (!spot) throw new NotFoundException("Spot not found");
+    await this.assertLocationOwnership(accountId, spot.locationId);
+    return spot;
+  }
+
   /** Every write in this module must confirm the location actually belongs to the caller's account. */
   private async assertLocationOwnership(accountId: string, locationId: string): Promise<void> {
     const location = await this.prisma.location.findUnique({ where: { id: locationId }, select: { accountId: true } });

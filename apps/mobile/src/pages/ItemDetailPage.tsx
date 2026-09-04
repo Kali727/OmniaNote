@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { itemsApi, type Item } from "../lib/items";
+import { locationsApi, type Spot } from "../lib/locations";
 import { STAMP_META, STAMP_ORDER } from "../lib/stamps";
 import type { StampType } from "@omnianote/shared";
 
@@ -17,11 +18,40 @@ export default function ItemDetailPage() {
   const [item, setItem] = useState<(Item & { downloadUrl: string | null }) | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingStamps, setSavingStamps] = useState(false);
+  const [spots, setSpots] = useState<Spot[]>([]);
+  const [savingSpot, setSavingSpot] = useState(false);
 
   useEffect(() => {
     if (!itemId) return;
     itemsApi.get(itemId).then(setItem).catch(() => setError("Couldn't load this item."));
   }, [itemId]);
+
+  useEffect(() => {
+    if (!item?.locationId) {
+      setSpots([]);
+      return;
+    }
+    locationsApi.listSpots(item.locationId).then(setSpots);
+  }, [item?.locationId]);
+
+  async function assignSpot(spotId: string) {
+    if (!item || !item.locationId || savingSpot) return;
+    const previous = item.spotId;
+    setItem({ ...item, spotId: spotId || null });
+    setSavingSpot(true);
+    try {
+      await itemsApi.file(item.id, {
+        locationId: item.locationId,
+        folderId: item.folderId ?? undefined,
+        spotId: spotId || undefined,
+      });
+    } catch {
+      setItem((current) => (current ? { ...current, spotId: previous } : current));
+      setError("Couldn't update the spot — try again.");
+    } finally {
+      setSavingSpot(false);
+    }
+  }
 
   async function toggleStamp(stamp: StampType) {
     if (!item || savingStamps) return;
@@ -81,6 +111,24 @@ export default function ItemDetailPage() {
                 );
               })}
             </div>
+
+            <div className="section-title">Spot</div>
+            {!item.locationId ? (
+              <p className="empty-state">File this item to a location from the Inbox to assign it to a spot.</p>
+            ) : spots.length === 0 ? (
+              <p className="empty-state">
+                No spots at this location yet — add one from the location screen to start tracking history.
+              </p>
+            ) : (
+              <select value={item.spotId ?? ""} disabled={savingSpot} onChange={(e) => assignSpot(e.target.value)}>
+                <option value="">— No spot —</option>
+                {spots.map((spot) => (
+                  <option key={spot.id} value={spot.id}>
+                    {spot.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </>
         )}
       </div>
