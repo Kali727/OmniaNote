@@ -49,9 +49,14 @@ run inside the container.
       via a new folder screen, and an item can be moved into/out of one from its detail screen just
       like a spot. `docs/ARCHITECTURE.md` also got a full pass documenting everything built this
       cycle, since it had drifted well behind the actual feature set.
+- [x] The mobile app is now also a real web app, served from the same domain as the API — visiting
+      it in any browser (phone or desktop) opens the actual app, no native install and no separate
+      web host needed. Same-origin means no CORS to configure either. Useful right now for
+      organizing/filing from a desktop, and for trying the app on a phone before a native build
+      exists.
 
-This closes out every item that was on the "majors first" list, the admin panel, and both minor
-gaps noticed along the way — everything left is deferred by explicit decision.
+This closes out every item that was on the "majors first" list, the admin panel, and every minor
+gap noticed along the way — everything left is deferred by explicit decision.
 
 **Deferred — explicit decisions, revisit later**
 - [ ] Live MFA email delivery — the Resend integration is done; `RESEND_API_KEY` just isn't set on
