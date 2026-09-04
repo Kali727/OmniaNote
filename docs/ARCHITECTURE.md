@@ -159,6 +159,38 @@ endpoints per method) both use short-TTL Redis keys rather than a database table
 code is inherently ephemeral. Enrollment is reachable from the mobile app's Settings screen
 (`apps/mobile/src/pages/SettingsPage.tsx`), not just the API.
 
+## The mobile app is also served as a plain web app
+
+`apps/mobile`'s own production build is served from the same origin as the API (`main.ts`, a
+second `useStaticAssets` root pointing at `apps/mobile/dist`) — visiting the bare domain in any
+browser, phone or desktop, opens the real app with no native install and no separate web host.
+`apps/api/Dockerfile` builds it as part of the image (`VITE_API_URL=/api/v1` for that one build
+step only — a relative URL, since the app is now same-origin with the API it's calling, unlike a
+Capacitor build, which has no "origin" of its own and needs the real absolute URL in
+`apps/mobile/.env`). This also means no CORS configuration is needed for browser access at all;
+`CORS_ORIGIN` in `infra/.env` exists for something else entirely reaching the API cross-origin.
+
+React Router's `BrowserRouter` needs a server-side fallback: a deep link like `/items/abc123` isn't
+a real file on disk, so it has to resolve to `index.html` and let the client-side router take over
+from there. That fallback lives in `ErrorLoggingFilter` (`common/filters/error-logging.filter.ts`),
+not as its own dedicated mechanism — worth knowing before you go looking for a `SpaController` or
+an Express catch-all `app.use()`, because two more obvious-looking approaches were tried first and
+both failed in ways that only showed up under testing:
+
+- A real Nest controller with a `@Get("*")` route, excluded from the global `/api/v1` prefix so it
+  wouldn't collide with it. Its registration order relative to the other feature modules' controllers
+  turned out to be unpredictable — it was observed shadowing `GET /api/v1/health` outright, serving
+  the SPA's HTML for a route that has nothing to do with it.
+- A plain Express `app.use()` catch-all added after `await app.init()` (to ensure Nest's own routes
+  were mounted first). That fixed the above, but broke the opposite way: Nest's own unmatched-route
+  handling runs before anything queued via a later `app.use()` ever gets a chance, so it caught
+  genuine SPA routes like `/inbox` and returned Nest's default 404 instead of the app.
+
+Nest's unmatched-route 404 *is* a real `NotFoundException`, and it's guaranteed to flow through
+every registered global exception filter — which is exactly the hook `ErrorLoggingFilter` was
+already using to log every 5xx. It just also checks, for a 404 on a GET request outside `/api` and
+`/admin`, whether to serve `index.html` instead of the normal JSON error body.
+
 ## Admin panel
 
 A static page at `/admin` (`apps/api/public/admin/`), served by the API itself outside its

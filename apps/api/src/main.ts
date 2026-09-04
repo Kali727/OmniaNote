@@ -29,6 +29,21 @@ async function bootstrap() {
   // this is for whoever runs the service, not for any logged-in end user.
   app.useStaticAssets(join(__dirname, "..", "public"));
 
+  // The mobile app's own web build, served from this same origin — so a browser (phone
+  // or desktop, no app install needed) can just visit the domain directly, with API calls
+  // landing same-origin and needing no CORS config at all. Same codebase that becomes the
+  // native app later; only the build-time VITE_API_URL differs (relative "/api/v1" here
+  // vs. an absolute URL for a Capacitor build, which has no "origin" of its own).
+  // Deliberately a second, separate static root from the admin one above rather than
+  // merged into apps/api/public — this one is a gitignored build artifact
+  // (apps/mobile/dist), not something hand-authored and checked in. Matched files (JS,
+  // CSS, images) are served directly here; a client-side route like /items/abc123 that
+  // isn't a real file falls through this and every registered controller, ending up as
+  // an unmatched-route 404 that ErrorLoggingFilter turns into the SPA's index.html
+  // instead — see that file for why that turned out to be the only reliable place to do
+  // this SPA fallback at all.
+  app.useStaticAssets(join(__dirname, "..", "..", "mobile", "dist"));
+
   const port = config.get("PORT", { infer: true });
   await app.listen(port);
 }

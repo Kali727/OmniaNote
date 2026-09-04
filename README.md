@@ -123,6 +123,11 @@ docker compose -f infra/docker-compose.yml up -d --build
 Caddy issues its own TLS certificate once `DOMAIN` resolves to the server. Database migrations run
 automatically on container start (see `apps/api/docker-entrypoint.sh`).
 
+Visiting `DOMAIN` in a plain browser — phone or desktop — opens the actual app: the API image
+builds and serves the mobile app's own web version alongside the JSON API, so there's no need for a
+native install or a separate web host just to try it out or use it for filing/organizing from a
+desk. See `docs/ARCHITECTURE.md`'s "The mobile app is also served as a plain web app" for how.
+
 ### Backups
 
 The `backup` service (`infra/backup/`) dumps Postgres and, if `BACKUP_S3_*` is set in `infra/.env`,

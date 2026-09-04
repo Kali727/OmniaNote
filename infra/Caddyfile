@@ -1,11 +1,14 @@
 {$DOMAIN:localhost} {
 	# Caddy issues/renews the TLS cert automatically once DOMAIN is a real hostname
 	# pointing at this server — nothing else to configure for HTTPS.
-	reverse_proxy /api/* api:3000
-	# The admin dashboard — a static page the API serves outside its /api/v1 prefix
-	# (see apps/api/src/main.ts). Not part of the mobile app; reachable only to whoever
-	# knows to visit it, and gated behind login + isPlatformAdmin from there.
-	reverse_proxy /admin* api:3000
+	#
+	# Everything proxies to the api container — it serves the JSON API under /api/v1, the
+	# admin dashboard under /admin, and the mobile app's own web build at every other path
+	# (see apps/api/src/main.ts), so a plain browser visit to the domain itself opens the
+	# real app: useful on a desktop for organizing/filing, or on a phone before a native
+	# build exists. No path-based routing needed here anymore now that one process owns
+	# all three.
+	reverse_proxy api:3000
 }
 
 # Catch-all for anything that doesn't match the block above — chiefly, browsing straight
@@ -22,9 +25,5 @@
 	tls internal {
 		on_demand
 	}
-	reverse_proxy /api/* api:3000
-	# The admin dashboard — a static page the API serves outside its /api/v1 prefix
-	# (see apps/api/src/main.ts). Not part of the mobile app; reachable only to whoever
-	# knows to visit it, and gated behind login + isPlatformAdmin from there.
-	reverse_proxy /admin* api:3000
+	reverse_proxy api:3000
 }
