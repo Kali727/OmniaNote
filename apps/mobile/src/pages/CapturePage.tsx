@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
-import { itemsApi } from "../lib/items";
+import { syncQueue } from "../lib/syncQueue";
+import { createThumbnail } from "../lib/thumbnail";
 import { AnnotationCanvas } from "../components/AnnotationCanvas";
 
 export default function CapturePage() {
@@ -55,7 +56,19 @@ export default function CapturePage() {
     setSaving(true);
     setError(null);
     try {
-      await itemsApi.captureMedia("PHOTO", title.trim(), photoBlob, "jpg", "image/jpeg");
+      // Thumbnail generation happens here, before enqueueing, while the blob is
+      // still in memory — the sync queue below is what actually reaches the
+      // network (or doesn't yet, if offline), so this only ever writes locally.
+      const thumbnailBlob = await createThumbnail(photoBlob).catch(() => undefined);
+      await syncQueue.enqueue({
+        type: "PHOTO",
+        title: title.trim(),
+        fileExtension: "jpg",
+        contentType: "image/jpeg",
+        fileBlob: photoBlob,
+        thumbnailBlob,
+        clientCreatedAt: new Date().toISOString(),
+      });
       navigate("/inbox");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save — try again.");

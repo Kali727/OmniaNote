@@ -275,6 +275,36 @@ a {
   font-size: 0.88rem;
 }
 
+/* --- offline / sync status --- */
+.outbox-status-icon--spin {
+  display: inline-block;
+  animation: outbox-spin 1.2s linear infinite;
+}
+
+@keyframes outbox-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .outbox-status-icon--spin {
+    animation: none;
+  }
+}
+
+.offline-banner {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
 /* --- voice dictation --- */
 .mic-btn {
   position: absolute;

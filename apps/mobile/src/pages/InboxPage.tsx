@@ -2,16 +2,22 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { itemsApi, type Item } from "../lib/items";
 import { locationsApi, type Location } from "../lib/locations";
+import { OutboxRow } from "../components/OutboxRow";
+import { useOutbox } from "../lib/syncQueue";
 
 export default function InboxPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<Item[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const outbox = useOutbox();
+
+  useEffect(() => {
+    locationsApi.list().then(setLocations);
+  }, []);
 
   useEffect(() => {
     itemsApi.listInbox().then(setItems);
-    locationsApi.list().then(setLocations);
-  }, []);
+  }, [outbox]);
 
   async function fileItem(itemId: string, locationId: string) {
     await itemsApi.file(itemId, { locationId });
@@ -26,7 +32,10 @@ export default function InboxPage() {
         </button>
       </div>
       <div className="screen__content">
-        {items.length === 0 && <p className="empty-state">Everything's filed. Nice.</p>}
+        {outbox.map((entry) => (
+          <OutboxRow key={entry.localId} entry={entry} />
+        ))}
+        {items.length === 0 && outbox.length === 0 && <p className="empty-state">Everything's filed. Nice.</p>}
         {items.map((item) => (
           <div key={item.id} className="location-row" style={{ marginBottom: "0.6rem", display: "flex", gap: "0.75rem", alignItems: "center" }}>
             {item.thumbnailUrl && (

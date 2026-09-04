@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { itemsApi } from "../lib/items";
+import { syncQueue } from "../lib/syncQueue";
 import { useDictation } from "../lib/dictation";
 
 export default function NotePage() {
@@ -25,7 +25,7 @@ export default function NotePage() {
     setSaving(true);
     setError(null);
     try {
-      await itemsApi.create({
+      await syncQueue.enqueue({
         type: "NOTE",
         title: title.trim(),
         body: body.trim() || undefined,

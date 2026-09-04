@@ -1,6 +1,5 @@
 import type { CreateItemInput, FileItemInput, StampType } from "@omnianote/shared";
-import { apiFetch, uploadToPresignedUrl } from "./apiClient";
-import { createThumbnail } from "./thumbnail";
+import { apiFetch } from "./apiClient";
 
 export interface Item {
   id: string;
@@ -49,36 +48,5 @@ export const itemsApi = {
       thumbnailUrl: string | null;
     }>(`/items/${itemId}`);
     return { ...item, thumbnailUrl, downloadUrl };
-  },
-
-  /** Full capture-to-inbox flow for a photo/video/pdf: create the metadata row, then push
-   *  the original bytes and (for photos) a client-generated thumbnail. A thumbnail failure
-   *  never blocks the capture — the item just falls back to its type icon in the grid. */
-  async captureMedia(
-    type: "PHOTO" | "VIDEO" | "PDF",
-    title: string,
-    file: Blob,
-    fileExtension: string,
-    contentType: string,
-  ): Promise<Item> {
-    const { item, uploadUrl, thumbnailUploadUrl } = await itemsApi.create({
-      type,
-      title,
-      fileExtension,
-      clientCreatedAt: new Date().toISOString(),
-    });
-    if (uploadUrl) {
-      await uploadToPresignedUrl(uploadUrl, file, contentType);
-      await itemsApi.confirmUpload(item.id, file.size, contentType);
-    }
-    if (thumbnailUploadUrl) {
-      try {
-        const thumbnail = await createThumbnail(file);
-        await uploadToPresignedUrl(thumbnailUploadUrl, thumbnail, "image/jpeg");
-      } catch {
-        // Non-fatal — the capture itself already succeeded above.
-      }
-    }
-    return item;
   },
 };

@@ -3,6 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { itemsApi, type Item } from "../lib/items";
 import { locationsApi, type Location } from "../lib/locations";
 import { ItemTile } from "../components/ItemTile";
+import { OutboxRow } from "../components/OutboxRow";
+import { useOutbox } from "../lib/syncQueue";
+import { useOnlineStatus } from "../lib/network";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -13,13 +16,21 @@ export default function HomePage() {
   const [newLocationName, setNewLocationName] = useState("");
   const [addingLocation, setAddingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const outbox = useOutbox();
+  const online = useOnlineStatus();
 
   useEffect(() => {
+    locationsApi.list().then(setLocations).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    // Refetch whenever the outbox changes — a queued capture reaching the
+    // server (or a status flip in between) is exactly when the "real" server
+    // copy should start appearing here instead of the local placeholder.
     itemsApi.listRecent().then(setRecent).catch(() => {});
     itemsApi.listFavorites().then(setFavorites).catch(() => {});
     itemsApi.listInbox().then((inbox) => setInboxCount(inbox.length)).catch(() => {});
-    locationsApi.list().then(setLocations).catch(() => {});
-  }, []);
+  }, [outbox]);
 
   async function addLocation(e: FormEvent) {
     e.preventDefault();
@@ -52,6 +63,22 @@ export default function HomePage() {
         </div>
       </div>
       <div className="screen__content">
+        {!online && (
+          <div className="offline-banner">
+            📴 You're offline — captures are saved on this device and will sync automatically once
+            you're back online.
+          </div>
+        )}
+
+        {outbox.length > 0 && (
+          <>
+            <div className="section-title">Syncing</div>
+            {outbox.map((entry) => (
+              <OutboxRow key={entry.localId} entry={entry} />
+            ))}
+          </>
+        )}
+
         {inboxCount > 0 && (
           <p className="empty-state">
             {inboxCount} item{inboxCount === 1 ? "" : "s"} waiting to be filed —{" "}
