@@ -24,15 +24,17 @@ run inside the container.
 - [x] Photo thumbnails in the item grid (client-generated, presigned URLs end to end)
 - [x] Photo annotation (finger-drawn markup, flattened at full resolution before upload)
 - [x] Search — Meilisearch wired end to end, scoped per account with an optional location filter
+- [x] Maintenance stamp library (Leak / Electrical / Safety Hazard / Parts Needed / Fixed) — also the
+      first item detail screen, since nothing let you open a single item before this
 
 **Next up** (working through these in order — majors first, polish later)
-- [ ] Maintenance stamp library (Leak / Electrical / Safety Hazard / etc.)
 - [ ] Location/asset history UI (the `by-spot` endpoint exists; nothing in the app surfaces it)
 - [ ] Voice-note dictation
 - [ ] Visible sync-status UI for offline capture (Queued/Uploading/Synced/Failed)
 
 **Deferred — explicit decisions, revisit later**
-- [ ] Real MFA email delivery — set `RESEND_API_KEY`; codes just log to `docker compose logs api` until then
+- [ ] Live MFA email delivery — the Resend integration is done; `RESEND_API_KEY` just isn't set on
+      the production deployment yet, so codes still log to `docker compose logs api` there
 - [ ] Team/invite-a-teammate flow — staying solo-account for now. Decided when we do build it: one
       subscription per Account (already how the schema works), no per-seat charge, teammates just
       share the account's tier
