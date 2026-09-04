@@ -30,9 +30,15 @@ run inside the container.
       history timeline; also added the location-creation UI that was missing entirely before this
 - [x] Voice-note dictation — live speech-to-text on the note body via the browser's Web Speech API;
       needs swapping for a native plugin once iOS/Android shells exist (see `lib/dictation.ts`)
+- [x] Offline capture with a visible sync-status UI — captures write to a local IndexedDB outbox
+      first and sync in the background, so nothing is lost to a dropped connection or a closed tab;
+      status (Queued/Uploading/Synced/Failed) shows on Home and in the Inbox, with tap-to-retry on
+      a failure (see `lib/syncQueue.ts`)
 
-**Next up** (working through these in order — majors first, polish later)
-- [ ] Visible sync-status UI for offline capture (Queued/Uploading/Synced/Failed)
+This closes out every item that was on the "majors first" list — everything below is either
+deferred by explicit decision or genuinely open-ended (the admin panel). Next up is picking through
+smaller polish and gaps noticed along the way (e.g. no folder-creation UI yet, no way to clear a
+previously-set spot back to "none").
 
 **Deferred — explicit decisions, revisit later**
 - [ ] Live MFA email delivery — the Resend integration is done; `RESEND_API_KEY` just isn't set on
