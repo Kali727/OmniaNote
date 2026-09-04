@@ -4,6 +4,15 @@ import { Resend } from "resend";
 import { MfaMethod } from "@omnianote/shared";
 import { EnvConfig } from "../config/env.validation";
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /**
  * Sends an out-of-band OTP code to the user. SMS is deliberately not implemented — it
  * costs money per message, and MFA was scoped to TOTP (free, primary) + email (free,
@@ -32,21 +41,44 @@ export class NotificationService {
       return;
     }
 
+    await this.sendEmail(
+      destination,
+      "Your OmniaNote verification code",
+      `<p>Your verification code is <strong>${code}</strong>.</p><p>It expires in 5 minutes. If you didn't request this, you can ignore this email.</p>`,
+    );
+  }
+
+  async sendTeamInvite(
+    destination: string,
+    accountName: string,
+    inviterName: string,
+    acceptUrl: string,
+  ): Promise<void> {
+    // accountName and inviterName are user-controlled (a team's chosen display name,
+    // someone's username) — escape before they land in HTML, or a name containing "&"
+    // (plausible: "Smith & Sons Hotels") breaks the markup, and one containing an actual
+    // <tag> injects it into the recipient's email client.
+    const safeAccountName = escapeHtml(accountName);
+    const safeInviterName = escapeHtml(inviterName);
+    await this.sendEmail(
+      destination,
+      `${inviterName} invited you to join ${accountName} on OmniaNote`,
+      `<p><strong>${safeInviterName}</strong> invited you to join <strong>${safeAccountName}</strong> on OmniaNote.</p>` +
+        `<p><a href="${acceptUrl}">Accept the invite</a> to set up your account. This link expires in 7 days.</p>` +
+        `<p>If you weren't expecting this, you can ignore this email.</p>`,
+    );
+  }
+
+  private async sendEmail(to: string, subject: string, html: string): Promise<void> {
     if (!this.resend) {
-      this.logger.warn(`[RESEND_API_KEY not set — logging instead of sending] Email OTP to ${destination}: ${code}`);
+      this.logger.warn(`[RESEND_API_KEY not set — logging instead of sending] To ${to}: ${subject}\n${html}`);
       return;
     }
 
-    const { error } = await this.resend.emails.send({
-      from: this.fromEmail,
-      to: destination,
-      subject: "Your OmniaNote verification code",
-      html: `<p>Your verification code is <strong>${code}</strong>.</p><p>It expires in 5 minutes. If you didn't request this, you can ignore this email.</p>`,
-    });
-
+    const { error } = await this.resend.emails.send({ from: this.fromEmail, to, subject, html });
     if (error) {
-      this.logger.error(`Resend failed to send OTP to ${destination}: ${error.message}`);
-      throw new Error("Failed to send verification email");
+      this.logger.error(`Resend failed to send "${subject}" to ${to}: ${error.message}`);
+      throw new Error("Failed to send email");
     }
   }
 }

@@ -3,3 +3,4 @@ export * from "./enums";
 export * from "./schemas/auth";
 export * from "./schemas/location";
 export * from "./schemas/item";
+export * from "./schemas/team";

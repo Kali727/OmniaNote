@@ -6,6 +6,7 @@ import { RedisModule } from "./common/redis/redis.module";
 import { AuthModule } from "./auth/auth.module";
 import { LocationsModule } from "./locations/locations.module";
 import { ItemsModule } from "./items/items.module";
+import { TeamModule } from "./team/team.module";
 import { HealthModule } from "./health/health.module";
 
 @Module({
@@ -16,6 +17,7 @@ import { HealthModule } from "./health/health.module";
     AuthModule,
     LocationsModule,
     ItemsModule,
+    TeamModule,
     HealthModule,
   ],
 })

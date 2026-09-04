@@ -8,6 +8,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [accountName, setAccountName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -16,7 +17,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await auth.register({ email, username, password, mobileNumber });
+      await auth.register({ email, username, password, mobileNumber, accountName: accountName.trim() || undefined });
       navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
@@ -48,6 +49,11 @@ export default function RegisterPage() {
             placeholder="Password (10+ characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+          />
+          <input
+            placeholder="Team name (optional, e.g. Grand Plaza Hotel)"
+            value={accountName}
+            onChange={(e) => setAccountName(e.target.value)}
           />
           {error && <p className="error">{error}</p>}
           <button type="submit" disabled={submitting}>

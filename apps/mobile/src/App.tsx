@@ -13,6 +13,8 @@ import SettingsPage from "./pages/SettingsPage";
 import SearchPage from "./pages/SearchPage";
 import ItemDetailPage from "./pages/ItemDetailPage";
 import SpotPage from "./pages/SpotPage";
+import TeamPage from "./pages/TeamPage";
+import InviteAcceptPage from "./pages/InviteAcceptPage";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"checking" | "in" | "out">("checking");
@@ -33,6 +35,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/mfa" element={<MfaChallengePage />} />
+        <Route path="/invite/:token" element={<InviteAcceptPage />} />
         <Route
           path="/"
           element={
@@ -94,6 +97,14 @@ export default function App() {
           element={
             <AuthGate>
               <SettingsPage />
+            </AuthGate>
+          }
+        />
+        <Route
+          path="/team"
+          element={
+            <AuthGate>
+              <TeamPage />
             </AuthGate>
           }
         />

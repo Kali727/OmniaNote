@@ -16,6 +16,10 @@ export const registerSchema = z.object({
     .regex(/^[a-zA-Z0-9_.-]+$/, "Username may only contain letters, numbers, dots, dashes and underscores"),
   password: passwordSchema,
   mobileNumber: z.string().min(8).max(20), // E.164, validated more strictly server-side via libphonenumber
+  // Optional on purpose — a solo user has no real need to name their account up front.
+  // Shown in team-invite emails and the team screen once teammates enter the picture;
+  // falls back to "<username>'s team" until set.
+  accountName: z.string().min(1).max(120).optional(),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
 

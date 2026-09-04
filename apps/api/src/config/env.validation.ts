@@ -29,6 +29,11 @@ export const envSchema = z.object({
 
   CORS_ORIGIN: z.string().default("*"),
 
+  // Base URL for links inside emails (invites, and anything similar later) — the mobile
+  // app's own web build, not the API. Defaults to the Vite dev server for local work;
+  // the Docker Compose deploy sets this to https://$DOMAIN.
+  APP_URL: z.string().default("http://localhost:5173"),
+
   // Optional: leave unset and MFA email codes just log to stdout instead of sending —
   // convenient for local dev, not something you want in production. Resend's shared
   // onboarding@resend.dev sender needs no domain verification, so this works with a

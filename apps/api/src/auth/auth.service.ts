@@ -40,7 +40,7 @@ export class AuthService {
     const passwordHash = await argon2.hash(input.password);
 
     const user = await this.prisma.$transaction(async (tx) => {
-      const account = await tx.account.create({ data: {} }); // defaults to FREE tier
+      const account = await tx.account.create({ data: { name: input.accountName } }); // defaults to FREE tier
       return tx.user.create({
         data: {
           accountId: account.id,
@@ -125,7 +125,8 @@ export class AuthService {
     });
   }
 
-  private async issueTokens(userId: string): Promise<AuthTokens> {
+  /** Public — reused by TeamService to log a user straight in right after they accept an invite. */
+  async issueTokens(userId: string): Promise<AuthTokens> {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { accountId: true } });
     const accessToken = await this.jwt.signAsync(
       { sub: userId, accountId: user.accountId },

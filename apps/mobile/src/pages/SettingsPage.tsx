@@ -87,6 +87,11 @@ export default function SettingsPage() {
 
         {step.name === "overview" && profile && (
           <>
+            <div className="section-title">Team</div>
+            <div className="location-row" style={{ marginBottom: "1.4rem", cursor: "pointer" }} onClick={() => navigate("/team")}>
+              Manage team members →
+            </div>
+
             <div className="section-title">Two-factor authentication</div>
             {profile.mfaEnabled ? (
               <p className="empty-state">

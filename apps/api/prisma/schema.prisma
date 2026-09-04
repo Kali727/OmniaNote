@@ -59,6 +59,7 @@ enum SubscriptionStatus {
 // doesn't require a schema change.
 model Account {
   id               String      @id @default(uuid())
+  name             String? // e.g. "Grand Plaza Hotel" — shown in invite emails and the team screen
   tier             AccountTier @default(FREE)
   storageUsedBytes BigInt      @default(0)
   createdAt        DateTime    @default(now())
@@ -69,6 +70,7 @@ model Account {
   items         Item[]
   tags          Tag[]
   subscriptions Subscription[]
+  invites       Invite[]
 }
 
 model User {
@@ -89,6 +91,24 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([accountId])
+}
+
+// A pending invitation to join an existing Account. Deliberately not a User row from
+// the start — the invitee hasn't set a password or username yet, and an invite can be
+// revoked or left to expire without ever having created auth-relevant state.
+model Invite {
+  id              String      @id @default(uuid())
+  accountId       String
+  account         Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  email           String
+  role            AccountRole @default(MEMBER)
+  token           String      @unique
+  invitedByUserId String
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime    @default(now())
 
   @@index([accountId])
 }
