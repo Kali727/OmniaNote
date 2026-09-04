@@ -26,9 +26,10 @@ run inside the container.
 - [x] Search — Meilisearch wired end to end, scoped per account with an optional location filter
 - [x] Maintenance stamp library (Leak / Electrical / Safety Hazard / Parts Needed / Fixed) — also the
       first item detail screen, since nothing let you open a single item before this
+- [x] Location/asset history UI — spots (recurring assets, e.g. "AC Unit, Room 312") get their own
+      history timeline; also added the location-creation UI that was missing entirely before this
 
 **Next up** (working through these in order — majors first, polish later)
-- [ ] Location/asset history UI (the `by-spot` endpoint exists; nothing in the app surfaces it)
 - [ ] Voice-note dictation
 - [ ] Visible sync-status UI for offline capture (Queued/Uploading/Synced/Failed)
 
