@@ -1,5 +1,12 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { CreateItemInput, FileItemInput, isWithinStorageLimit, ItemType, SetStampsInput } from "@omnianote/shared";
+import {
+  CreateItemInput,
+  FileItemInput,
+  isWithinStorageLimit,
+  ItemType,
+  SetStampsInput,
+  SetTagsInput,
+} from "@omnianote/shared";
 import { Item } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { StorageService } from "../storage/storage.service";
@@ -51,6 +58,10 @@ export class ItemsService {
       },
     });
 
+    if (input.tagNames?.length) {
+      await this.replaceItemTags(accountId, item.id, input.tagNames);
+    }
+
     await this.searchService.indexItem(item);
 
     const uploadUrl = storageKey ? await this.storage.getUploadUrl(storageKey, `application/octet-stream`) : null;
@@ -88,7 +99,11 @@ export class ItemsService {
     const item = await this.getOwnedItem(accountId, itemId);
     const downloadUrl = item.storageKey ? await this.storage.getDownloadUrl(item.storageKey) : null;
     const thumbnailUrl = item.thumbnailKey ? await this.storage.getDownloadUrl(item.thumbnailKey) : null;
-    return { item, downloadUrl, thumbnailUrl };
+    const tags = await this.getTagNames(itemId);
+    // Attachments are only ever meaningful on a NOTE (see attachToNote) — skip the join
+    // for every photo/video/PDF detail view.
+    const attachments = item.type === ItemType.NOTE ? await this.getNoteAttachments(itemId) : [];
+    return { item, downloadUrl, thumbnailUrl, tags, attachments };
   }
 
   async listInbox(accountId: string) {
@@ -116,12 +131,11 @@ export class ItemsService {
   }
 
   async listByFolder(accountId: string, locationId: string, folderId: string | null) {
-    return this.withThumbnailUrls(
-      await this.prisma.item.findMany({
-        where: { accountId, locationId, folderId },
-        orderBy: { clientCreatedAt: "desc" },
-      }),
-    );
+    // folderId === null means "loose items at this location" (LocationPage's root view,
+    // as opposed to browsing an actual folder) — an item pinned to a spot has been
+    // organized too, just not into a folder, so it shouldn't still show up as unsorted.
+    const where = folderId === null ? { accountId, locationId, folderId, spotId: null } : { accountId, locationId, folderId };
+    return this.withThumbnailUrls(await this.prisma.item.findMany({ where, orderBy: { clientCreatedAt: "desc" } }));
   }
 
   async listBySpot(accountId: string, spotId: string) {
@@ -162,6 +176,57 @@ export class ItemsService {
     });
     await this.searchService.indexItem(updated);
     return updated;
+  }
+
+  async listTagNames(accountId: string): Promise<string[]> {
+    const tags = await this.prisma.tag.findMany({ where: { accountId }, orderBy: { name: "asc" }, select: { name: true } });
+    return tags.map((t) => t.name);
+  }
+
+  async setTags(accountId: string, itemId: string, input: SetTagsInput) {
+    const item = await this.getOwnedItem(accountId, itemId);
+    await this.replaceItemTags(accountId, itemId, input.tagNames);
+    await this.searchService.indexItem(item);
+    return { item, tags: await this.getTagNames(itemId) };
+  }
+
+  /** Tags are get-or-create by name, scoped to the account (Tag is unique on
+   *  [accountId, name]) — there's no separate "create a tag" step in the product. */
+  private async replaceItemTags(accountId: string, itemId: string, tagNames: string[]): Promise<void> {
+    const uniqueNames = [...new Set(tagNames.map((name) => name.trim()).filter(Boolean))];
+    const tags = await Promise.all(
+      uniqueNames.map((name) =>
+        this.prisma.tag.upsert({
+          where: { accountId_name: { accountId, name } },
+          update: {},
+          create: { accountId, name },
+        }),
+      ),
+    );
+    await this.prisma.$transaction([
+      this.prisma.itemTag.deleteMany({ where: { itemId } }),
+      ...tags.map((tag) => this.prisma.itemTag.create({ data: { itemId, tagId: tag.id } })),
+    ]);
+  }
+
+  private async getTagNames(itemId: string): Promise<string[]> {
+    const itemTags = await this.prisma.itemTag.findMany({ where: { itemId }, include: { tag: true } });
+    return itemTags.map((it) => it.tag.name).sort();
+  }
+
+  private async getNoteAttachments(noteItemId: string) {
+    const links = await this.prisma.noteAttachment.findMany({
+      where: { noteItemId },
+      include: { attachmentItem: true },
+    });
+    return Promise.all(
+      links.map(async ({ attachmentItem }) => ({
+        id: attachmentItem.id,
+        type: attachmentItem.type,
+        title: attachmentItem.title,
+        thumbnailUrl: attachmentItem.thumbnailKey ? await this.storage.getDownloadUrl(attachmentItem.thumbnailKey) : null,
+      })),
+    );
   }
 
   async setStamps(accountId: string, itemId: string, input: SetStampsInput) {

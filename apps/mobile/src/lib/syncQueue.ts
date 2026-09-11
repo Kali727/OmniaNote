@@ -83,7 +83,11 @@ async function syncOne(entry: OutboxEntry): Promise<void> {
       type: entry.type,
       title: entry.title,
       body: entry.body,
+      locationId: entry.locationId,
+      folderId: entry.folderId,
+      spotId: entry.spotId,
       stamps: entry.stamps,
+      tagNames: entry.tagNames,
       fileExtension: entry.fileExtension,
       clientCreatedAt: entry.clientCreatedAt,
     };

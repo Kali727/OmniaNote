@@ -6,6 +6,8 @@ import { ItemTile } from "../components/ItemTile";
 import { OutboxRow } from "../components/OutboxRow";
 import { useOutbox } from "../lib/syncQueue";
 import { useOnlineStatus } from "../lib/network";
+import { capturePhoto } from "../lib/camera";
+import { useAccountTier } from "../lib/tier";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -16,8 +18,12 @@ export default function HomePage() {
   const [newLocationName, setNewLocationName] = useState("");
   const [addingLocation, setAddingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [captureError, setCaptureError] = useState<string | null>(null);
   const outbox = useOutbox();
   const online = useOnlineStatus();
+  const accountTier = useAccountTier();
+  const atLocationLimit =
+    accountTier != null && accountTier.limits.maxLocations != null && locations.length >= accountTier.limits.maxLocations;
 
   useEffect(() => {
     locationsApi.list().then(setLocations).catch(() => {});
@@ -31,6 +37,20 @@ export default function HomePage() {
     itemsApi.listFavorites().then(setFavorites).catch(() => {});
     itemsApi.listInbox().then((inbox) => setInboxCount(inbox.length)).catch(() => {});
   }, [outbox]);
+
+  // Fires the OS camera directly from this click — the trusted user gesture the browser
+  // requires to open it — instead of navigating to a separate page first and making the
+  // user tap a second "open camera" button there.
+  async function startCapture() {
+    setCaptureError(null);
+    try {
+      const photo = await capturePhoto();
+      if (!photo) return; // user backed out of the camera
+      navigate("/capture", { state: { photoBlob: photo.blob, photoPreview: photo.previewUrl } });
+    } catch (err) {
+      setCaptureError(err instanceof Error ? err.message : "Couldn't open the camera.");
+    }
+  }
 
   async function addLocation(e: FormEvent) {
     e.preventDefault();
@@ -96,17 +116,24 @@ export default function HomePage() {
             ))}
           </div>
         )}
-        <form onSubmit={addLocation} style={{ display: "flex", gap: "0.5rem" }}>
-          <input
-            placeholder="e.g. Main Building"
-            value={newLocationName}
-            onChange={(e) => setNewLocationName(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <button type="submit" disabled={addingLocation || !newLocationName.trim()}>
-            Add
-          </button>
-        </form>
+        {atLocationLimit ? (
+          <p className="empty-state">
+            Your {accountTier.tier} plan includes {accountTier.limits.maxLocations} location
+            {accountTier.limits.maxLocations === 1 ? "" : "s"} — upgrade to add another.
+          </p>
+        ) : (
+          <form onSubmit={addLocation} style={{ display: "flex", gap: "0.5rem" }}>
+            <input
+              placeholder="e.g. Main Building"
+              value={newLocationName}
+              onChange={(e) => setNewLocationName(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button type="submit" disabled={addingLocation || !newLocationName.trim()}>
+              Add
+            </button>
+          </form>
+        )}
         {locationError && <p className="error">{locationError}</p>}
 
         <div className="section-title">Favorites</div>
@@ -132,8 +159,13 @@ export default function HomePage() {
         )}
       </div>
 
+      {captureError && (
+        <p className="error" style={{ margin: "0 1rem" }}>
+          {captureError}
+        </p>
+      )}
       <div className="capture-bar">
-        <button className="btn-photo" onClick={() => navigate("/capture")}>
+        <button className="btn-photo" onClick={startCapture}>
           📷 Photo
         </button>
         <button className="btn-note" onClick={() => navigate("/note/new")}>

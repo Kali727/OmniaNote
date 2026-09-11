@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { isWithinLocationLimit } from "@omnianote/shared";
+import { isWithinFolderLimit, isWithinLocationLimit, isWithinSpotLimit } from "@omnianote/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateFolderInput, CreateLocationInput, CreateSpotInput } from "@omnianote/shared";
 
@@ -29,6 +29,15 @@ export class LocationsService {
 
   async createFolder(accountId: string, input: CreateFolderInput) {
     await this.assertLocationOwnership(accountId, input.locationId);
+    const account = await this.prisma.account.findUniqueOrThrow({ where: { id: accountId } });
+    // Counts every folder at this location regardless of nesting depth — a folder still
+    // carries its location's id at every level, so this can't be dodged by nesting.
+    const currentCount = await this.prisma.folder.count({ where: { locationId: input.locationId } });
+    if (!isWithinFolderLimit(account.tier, currentCount)) {
+      throw new ForbiddenException(
+        `Your ${account.tier} plan allows a limited number of folders per location — upgrade to add more.`,
+      );
+    }
     return this.prisma.folder.create({
       data: { locationId: input.locationId, parentFolderId: input.parentFolderId, name: input.name },
     });
@@ -41,6 +50,13 @@ export class LocationsService {
 
   async createSpot(accountId: string, input: CreateSpotInput) {
     await this.assertLocationOwnership(accountId, input.locationId);
+    const account = await this.prisma.account.findUniqueOrThrow({ where: { id: accountId } });
+    const currentCount = await this.prisma.spot.count({ where: { locationId: input.locationId } });
+    if (!isWithinSpotLimit(account.tier, currentCount)) {
+      throw new ForbiddenException(
+        `Your ${account.tier} plan allows a limited number of spots per location — upgrade to add more.`,
+      );
+    }
     return this.prisma.spot.create({ data: { locationId: input.locationId, name: input.name } });
   }
 

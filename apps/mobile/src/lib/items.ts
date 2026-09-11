@@ -1,4 +1,4 @@
-import type { CreateItemInput, FileItemInput, StampType } from "@omnianote/shared";
+import type { CreateItemInput, FileItemInput, SetTagsInput, StampType } from "@omnianote/shared";
 import { apiFetch } from "./apiClient";
 
 export interface Item {
@@ -13,6 +13,13 @@ export interface Item {
   stamps: StampType[];
   clientCreatedAt: string;
   thumbnailUrl?: string | null;
+}
+
+export interface NoteAttachmentSummary {
+  id: string;
+  type: Item["type"];
+  title: string;
+  thumbnailUrl: string | null;
 }
 
 
@@ -41,12 +48,22 @@ export const itemsApi = {
   setStamps: (itemId: string, stamps: StampType[]) =>
     apiFetch<Item>(`/items/${itemId}/stamps`, { method: "PATCH", body: JSON.stringify({ stamps }) }),
 
-  async get(itemId: string): Promise<Item & { downloadUrl: string | null }> {
-    const { item, downloadUrl, thumbnailUrl } = await apiFetch<{
+  setTags: (itemId: string, input: SetTagsInput) =>
+    apiFetch<{ item: Item; tags: string[] }>(`/items/${itemId}/tags`, { method: "PATCH", body: JSON.stringify(input) }),
+
+  listTags: () => apiFetch<string[]>("/items/tags"),
+
+  async get(itemId: string): Promise<Item & { downloadUrl: string | null; tags: string[]; attachments: NoteAttachmentSummary[] }> {
+    const { item, downloadUrl, thumbnailUrl, tags, attachments } = await apiFetch<{
       item: Omit<Item, "thumbnailUrl">;
       downloadUrl: string | null;
       thumbnailUrl: string | null;
+      tags: string[];
+      attachments: NoteAttachmentSummary[];
     }>(`/items/${itemId}`);
-    return { ...item, thumbnailUrl, downloadUrl };
+    return { ...item, thumbnailUrl, downloadUrl, tags, attachments };
   },
+
+  attach: (input: { noteItemId: string; attachmentItemId: string }) =>
+    apiFetch<void>("/items/attach", { method: "POST", body: JSON.stringify(input) }),
 };
