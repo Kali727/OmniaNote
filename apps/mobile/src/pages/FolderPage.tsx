@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { itemsApi, type Item } from "../lib/items";
 import { locationsApi, type Folder } from "../lib/locations";
 import { ItemTile } from "../components/ItemTile";
+import { useAccountTier } from "../lib/tier";
 
 export default function FolderPage() {
   const { locationId, folderId } = useParams<{ locationId: string; folderId: string }>();
@@ -12,6 +13,13 @@ export default function FolderPage() {
   const [newFolderName, setNewFolderName] = useState("");
   const [addingFolder, setAddingFolder] = useState(false);
   const [folderError, setFolderError] = useState<string | null>(null);
+  const accountTier = useAccountTier();
+  // The cap is per-location, across every folder regardless of nesting — same total
+  // `allFolders` already fetched here for the subfolder list covers it.
+  const atFolderLimit =
+    accountTier != null &&
+    accountTier.limits.maxFoldersPerLocation != null &&
+    allFolders.length >= accountTier.limits.maxFoldersPerLocation;
 
   useEffect(() => {
     if (!locationId || !folderId) return;
@@ -62,17 +70,24 @@ export default function FolderPage() {
             ))}
           </div>
         )}
-        <form onSubmit={addFolder} style={{ display: "flex", gap: "0.5rem" }}>
-          <input
-            placeholder="e.g. Linens"
-            value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <button type="submit" disabled={addingFolder || !newFolderName.trim()}>
-            Add
-          </button>
-        </form>
+        {atFolderLimit ? (
+          <p className="empty-state">
+            Your {accountTier.tier} plan allows {accountTier.limits.maxFoldersPerLocation} folders per location —
+            upgrade for more.
+          </p>
+        ) : (
+          <form onSubmit={addFolder} style={{ display: "flex", gap: "0.5rem" }}>
+            <input
+              placeholder="e.g. Linens"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button type="submit" disabled={addingFolder || !newFolderName.trim()}>
+              Add
+            </button>
+          </form>
+        )}
         {folderError && <p className="error">{folderError}</p>}
 
         <div className="section-title">Items</div>

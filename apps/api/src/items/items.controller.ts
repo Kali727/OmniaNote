@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ItemsService } from "./items.service";
-import { AttachToNoteDto, ConfirmUploadDto, CreateItemDto, FileItemDto, SetStampsDto } from "./dto/items.dto";
+import { AttachToNoteDto, ConfirmUploadDto, CreateItemDto, FileItemDto, SetStampsDto, SetTagsDto } from "./dto/items.dto";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtPayload } from "../auth/strategies/jwt.strategy";
@@ -37,6 +37,12 @@ export class ItemsController {
   @Get("favorites")
   favorites(@CurrentUser() user: JwtPayload) {
     return this.items.listFavorites(user.accountId);
+  }
+
+  // Declared before the ":id" route below so "tags" isn't parsed as an item id.
+  @Get("tags")
+  tags(@CurrentUser() user: JwtPayload) {
+    return this.items.listTagNames(user.accountId);
   }
 
   @Get("by-folder")
@@ -76,6 +82,11 @@ export class ItemsController {
   @Patch(":id/stamps")
   setStamps(@CurrentUser() user: JwtPayload, @Param("id", ParseUUIDPipe) id: string, @Body() body: SetStampsDto) {
     return this.items.setStamps(user.accountId, id, body);
+  }
+
+  @Patch(":id/tags")
+  setTags(@CurrentUser() user: JwtPayload, @Param("id", ParseUUIDPipe) id: string, @Body() body: SetTagsDto) {
+    return this.items.setTags(user.accountId, id, body);
   }
 
   @Post("attach")

@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { itemsApi, type Item } from "../lib/items";
+import { itemsApi, type Item, type NoteAttachmentSummary } from "../lib/items";
 import { locationsApi, type Folder, type Spot } from "../lib/locations";
 import { STAMP_META, STAMP_ORDER } from "../lib/stamps";
 import type { StampType } from "@omnianote/shared";
@@ -12,20 +12,36 @@ const FALLBACK_ICON: Record<Item["type"], string> = {
   NOTE: "📝",
 };
 
+function parseTags(text: string): string[] {
+  return [...new Set(text.split(",").map((t) => t.trim()).filter(Boolean))];
+}
+
+type DetailItem = Item & { downloadUrl: string | null; tags: string[]; attachments: NoteAttachmentSummary[] };
+
 export default function ItemDetailPage() {
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<(Item & { downloadUrl: string | null }) | null>(null);
+  const [item, setItem] = useState<DetailItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingStamps, setSavingStamps] = useState(false);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [savingSpot, setSavingSpot] = useState(false);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [savingFolder, setSavingFolder] = useState(false);
+  const [tagsText, setTagsText] = useState("");
+  const [existingTags, setExistingTags] = useState<string[]>([]);
+  const [savingTags, setSavingTags] = useState(false);
 
   useEffect(() => {
     if (!itemId) return;
-    itemsApi.get(itemId).then(setItem).catch(() => setError("Couldn't load this item."));
+    itemsApi
+      .get(itemId)
+      .then((loaded) => {
+        setItem(loaded);
+        setTagsText(loaded.tags.join(", "));
+      })
+      .catch(() => setError("Couldn't load this item."));
+    itemsApi.listTags().then(setExistingTags).catch(() => {});
   }, [itemId]);
 
   useEffect(() => {
@@ -71,6 +87,27 @@ export default function ItemDetailPage() {
     }
   }
 
+  function toggleTagChip(tag: string) {
+    const current = parseTags(tagsText);
+    const next = current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag];
+    setTagsText(next.join(", "));
+  }
+
+  async function saveTags() {
+    if (!item || savingTags) return;
+    const tagNames = parseTags(tagsText);
+    setSavingTags(true);
+    setError(null);
+    try {
+      await itemsApi.setTags(item.id, { tagNames });
+      setItem({ ...item, tags: tagNames });
+    } catch {
+      setError("Couldn't save those tags — try again.");
+    } finally {
+      setSavingTags(false);
+    }
+  }
+
   async function toggleStamp(stamp: StampType) {
     if (!item || savingStamps) return;
     const next = item.stamps.includes(stamp) ? item.stamps.filter((s) => s !== stamp) : [...item.stamps, stamp];
@@ -111,6 +148,36 @@ export default function ItemDetailPage() {
             <div className="detail-title">{item.title}</div>
             {item.body && <p style={{ whiteSpace: "pre-wrap", marginBottom: "1.2rem" }}>{item.body}</p>}
 
+            {item.type === "NOTE" && item.attachments.length > 0 && (
+              <>
+                <div className="section-title">Attachments</div>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+                  {item.attachments.map((attachment) => (
+                    <div
+                      key={attachment.id}
+                      onClick={() => navigate(`/items/${attachment.id}`)}
+                      style={{ cursor: "pointer", textAlign: "center", width: 72 }}
+                    >
+                      {attachment.thumbnailUrl ? (
+                        <img
+                          src={attachment.thumbnailUrl}
+                          alt=""
+                          style={{ width: 64, height: 64, borderRadius: 8, objectFit: "cover" }}
+                        />
+                      ) : (
+                        <div style={{ width: 64, height: 64, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.6rem", background: "var(--surface)" }}>
+                          {FALLBACK_ICON[attachment.type]}
+                        </div>
+                      )}
+                      <div style={{ fontSize: "0.7rem", color: "var(--ink-soft)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {attachment.title}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
             <div className="section-title">Stamps</div>
             <div className="stamp-picker">
               {STAMP_ORDER.map((stamp) => {
@@ -128,6 +195,35 @@ export default function ItemDetailPage() {
                   </button>
                 );
               })}
+            </div>
+
+            <div className="section-title">Tags</div>
+            {existingTags.length > 0 && (
+              <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+                {existingTags.map((tag) => {
+                  const active = parseTags(tagsText).includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      className={`stamp-chip${active ? " stamp-chip--active" : ""}`}
+                      onClick={() => toggleTagChip(tag)}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.2rem" }}>
+              <input
+                placeholder="e.g. leak, urgent"
+                value={tagsText}
+                onChange={(e) => setTagsText(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button onClick={saveTags} disabled={savingTags}>
+                {savingTags ? "Saving…" : "Save"}
+              </button>
             </div>
 
             <div className="section-title">Folder</div>

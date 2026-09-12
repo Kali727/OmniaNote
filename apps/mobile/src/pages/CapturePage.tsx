@@ -1,14 +1,24 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { useLocation, useNavigate } from "react-router-dom";
 import { syncQueue } from "../lib/syncQueue";
 import { createThumbnail } from "../lib/thumbnail";
+import { capturePhoto } from "../lib/camera";
 import { AnnotationCanvas } from "../components/AnnotationCanvas";
+
+interface CaptureNavState {
+  photoBlob?: Blob;
+  photoPreview?: string;
+}
 
 export default function CapturePage() {
   const navigate = useNavigate();
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoBlob, setPhotoBlob] = useState<Blob | null>(null);
+  // The Home screen's Photo button already opens the camera itself (from its own click,
+  // so the browser counts it as a real user gesture) and hands the result here via
+  // router state. Landing here directly — a back/forward navigation, or a bookmark —
+  // has no photo yet, so this page still falls back to its own "Open camera" button.
+  const routerState = useLocation().state as CaptureNavState | null;
+  const [photoPreview, setPhotoPreview] = useState<string | null>(routerState?.photoPreview ?? null);
+  const [photoBlob, setPhotoBlob] = useState<Blob | null>(routerState?.photoBlob ?? null);
   const [annotating, setAnnotating] = useState(false);
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
@@ -23,20 +33,15 @@ export default function CapturePage() {
   );
 
   async function takePhoto() {
-    let photo;
+    setError(null);
     try {
-      photo = await Camera.getPhoto({
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera,
-        quality: 85,
-      });
-    } catch {
-      return; // user backed out of the camera/picker — not an error
+      const photo = await capturePhoto();
+      if (!photo) return; // user backed out of the camera
+      setPhotoBlob(photo.blob);
+      setPhotoPreview(photo.previewUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't open the camera.");
     }
-    if (!photo.webPath) return;
-    const blob = await fetch(photo.webPath).then((r) => r.blob());
-    setPhotoBlob(blob);
-    setPhotoPreview(photo.webPath);
   }
 
   function applyAnnotation(annotated: Blob) {

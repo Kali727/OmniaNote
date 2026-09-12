@@ -3,12 +3,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import { itemsApi, type Item } from "../lib/items";
 import { locationsApi, type Folder, type Location, type Spot } from "../lib/locations";
 import { ItemTile } from "../components/ItemTile";
+import { useAccountTier } from "../lib/tier";
 
 export default function LocationPage() {
   const { locationId } = useParams<{ locationId: string }>();
   const navigate = useNavigate();
   const [location, setLocation] = useState<Location | null>(null);
-  const [folders, setFolders] = useState<Folder[]>([]);
+  // Every folder at this location, not just the top-level ones — the per-location cap
+  // counts nested subfolders too (see tiers.ts), so hiding the "add folder" box needs
+  // the true total, not just what's rendered under "Folders" here.
+  const [allFolders, setAllFolders] = useState<Folder[]>([]);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [newSpotName, setNewSpotName] = useState("");
@@ -17,14 +21,23 @@ export default function LocationPage() {
   const [newFolderName, setNewFolderName] = useState("");
   const [addingFolder, setAddingFolder] = useState(false);
   const [folderError, setFolderError] = useState<string | null>(null);
+  const accountTier = useAccountTier();
 
   useEffect(() => {
     if (!locationId) return;
     locationsApi.list().then((all) => setLocation(all.find((l) => l.id === locationId) ?? null));
-    locationsApi.listFolders(locationId).then((all) => setFolders(all.filter((f) => !f.parentFolderId)));
+    locationsApi.listFolders(locationId).then(setAllFolders);
     locationsApi.listSpots(locationId).then(setSpots);
     itemsApi.listByFolder(locationId).then(setItems);
   }, [locationId]);
+
+  const folders = allFolders.filter((f) => !f.parentFolderId);
+  const atFolderLimit =
+    accountTier != null &&
+    accountTier.limits.maxFoldersPerLocation != null &&
+    allFolders.length >= accountTier.limits.maxFoldersPerLocation;
+  const atSpotLimit =
+    accountTier != null && accountTier.limits.maxSpotsPerLocation != null && spots.length >= accountTier.limits.maxSpotsPerLocation;
 
   async function addSpot(e: FormEvent) {
     e.preventDefault();
@@ -51,7 +64,7 @@ export default function LocationPage() {
     setFolderError(null);
     try {
       const folder = await locationsApi.createFolder({ locationId, name });
-      setFolders((prev) => [...prev, folder].sort((a, b) => a.name.localeCompare(b.name)));
+      setAllFolders((prev) => [...prev, folder]);
       setNewFolderName("");
     } catch (err) {
       setFolderError(err instanceof Error ? err.message : "Couldn't add that folder.");
@@ -81,17 +94,24 @@ export default function LocationPage() {
             ))}
           </div>
         )}
-        <form onSubmit={addSpot} style={{ display: "flex", gap: "0.5rem" }}>
-          <input
-            placeholder="e.g. AC Unit, Room 312"
-            value={newSpotName}
-            onChange={(e) => setNewSpotName(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <button type="submit" disabled={addingSpot || !newSpotName.trim()}>
-            Add
-          </button>
-        </form>
+        {atSpotLimit ? (
+          <p className="empty-state">
+            Your {accountTier.tier} plan allows {accountTier.limits.maxSpotsPerLocation} spots per location — upgrade
+            for more.
+          </p>
+        ) : (
+          <form onSubmit={addSpot} style={{ display: "flex", gap: "0.5rem" }}>
+            <input
+              placeholder="e.g. AC Unit, Room 312"
+              value={newSpotName}
+              onChange={(e) => setNewSpotName(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button type="submit" disabled={addingSpot || !newSpotName.trim()}>
+              Add
+            </button>
+          </form>
+        )}
         {spotError && <p className="error">{spotError}</p>}
 
         <div className="section-title">Folders</div>
@@ -112,17 +132,24 @@ export default function LocationPage() {
             ))}
           </div>
         )}
-        <form onSubmit={addFolder} style={{ display: "flex", gap: "0.5rem" }}>
-          <input
-            placeholder="e.g. Housekeeping Supplies"
-            value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <button type="submit" disabled={addingFolder || !newFolderName.trim()}>
-            Add
-          </button>
-        </form>
+        {atFolderLimit ? (
+          <p className="empty-state">
+            Your {accountTier.tier} plan allows {accountTier.limits.maxFoldersPerLocation} folders per location —
+            upgrade for more.
+          </p>
+        ) : (
+          <form onSubmit={addFolder} style={{ display: "flex", gap: "0.5rem" }}>
+            <input
+              placeholder="e.g. Housekeeping Supplies"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button type="submit" disabled={addingFolder || !newFolderName.trim()}>
+              Add
+            </button>
+          </form>
+        )}
         {folderError && <p className="error">{folderError}</p>}
 
         <div className="section-title">Loose items</div>

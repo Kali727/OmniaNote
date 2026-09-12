@@ -7,7 +7,11 @@ export interface OutboxEntry {
   type: "PHOTO" | "VIDEO" | "PDF" | "NOTE";
   title: string;
   body?: string;
+  locationId?: string;
+  folderId?: string;
+  spotId?: string;
   stamps?: StampType[];
+  tagNames?: string[];
   fileExtension?: string;
   contentType?: string;
   fileBlob?: Blob;
